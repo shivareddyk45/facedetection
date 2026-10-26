@@ -53,7 +53,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# 2. Clean, Professional Styling (Arial, White/Light-Grey, Blue Buttons)
+# 2. Clean, Professional Styling (Arial, Adaptive Theme, Blue Buttons)
 # -------------------------------------------------------------
 st.markdown(
     """
@@ -64,6 +64,10 @@ st.markdown(
         --background-color: #f8f9fa;
         --secondary-background-color: #ffffff;
         --border-color: #dee2e6;
+        --primary-blue: #0d6efd;
+        --primary-hover: #0b5ed7;
+        --danger-red: #dc3545;
+        --danger-hover: #bb2d3b;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -72,6 +76,10 @@ st.markdown(
             --background-color: #0e1117;
             --secondary-background-color: #1e232b;
             --border-color: #30363d;
+            --primary-blue: #0d6efd;
+            --primary-hover: #0b5ed7;
+            --danger-red: #dc3545;
+            --danger-hover: #bb2d3b;
         }
     }
 
@@ -86,7 +94,7 @@ st.markdown(
     }
 
     /* Headings */
-    h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
         font-family: Arial, Helvetica, sans-serif !important;
         color: var(--text-color) !important;
         font-weight: 600 !important;
@@ -107,7 +115,7 @@ st.markdown(
         color: var(--text-color) !important;
         opacity: 0.85;
         margin-top: 0px !important;
-        margin-bottom: 20px !important;
+        margin-bottom: 24px !important;
         font-weight: normal !important;
     }
 
@@ -121,26 +129,35 @@ st.markdown(
         color: var(--text-color) !important;
     }
 
-    /* Action Buttons (Keep high contrast: white text on solid blue/gray) */
-    div.stButton > button, div.stButton > button *, div.stButton > button p {
-        background-color: #0d6efd !important;
+    /* Button Styling: Fix all overlapping, truncation, and sizing issues */
+    div.stButton > button {
+        background-color: var(--primary-blue) !important;
         color: #ffffff !important;
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 14px !important;
-        font-weight: 500 !important;
-        border: 1px solid #0d6efd !important;
-        border-radius: 4px !important;
-        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--primary-blue) !important;
+        border-radius: 6px !important;
+        padding: 10px 16px !important;
+        min-height: 44px !important;
+        height: auto !important;
+        width: 100% !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        line-height: 1.3 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
         box-shadow: none !important;
         text-shadow: none !important;
-        transition: background-color 0.15s ease-in-out !important;
+        transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out !important;
     }
 
     div.stButton > button:hover {
-        background-color: #0b5ed7 !important;
-        border-color: #0a58ca !important;
+        background-color: var(--primary-hover) !important;
+        border-color: var(--primary-hover) !important;
         color: #ffffff !important;
-        box-shadow: none !important;
     }
 
     div.stButton > button:active {
@@ -148,24 +165,36 @@ st.markdown(
         border-color: #0a53be !important;
     }
 
-    /* Stop Camera / Secondary Buttons */
-    div.stButton > button[kind="secondary"], div.stButton > button[kind="secondary"] * {
-        background-color: #6c757d !important;
-        border-color: #6c757d !important;
+    /* Stop Camera / Secondary / Danger Button */
+    div.stButton > button[kind="secondary"] {
+        background-color: var(--danger-red) !important;
+        border-color: var(--danger-red) !important;
         color: #ffffff !important;
     }
 
     div.stButton > button[kind="secondary"]:hover {
-        background-color: #5c636a !important;
-        border-color: #565e64 !important;
+        background-color: var(--danger-hover) !important;
+        border-color: var(--danger-hover) !important;
+        color: #ffffff !important;
     }
 
-    /* Clean Metric Boxes */
+    /* Inputs */
+    .stTextInput input, input[type="text"], input[type="number"] {
+        font-family: Arial, Helvetica, sans-serif !important;
+        border-radius: 6px !important;
+        border: 1px solid var(--border-color, #ced4da) !important;
+        color: var(--text-color) !important;
+        background-color: var(--secondary-background-color, #ffffff) !important;
+        padding: 10px 14px !important;
+        min-height: 44px !important;
+    }
+
+    /* Metrics */
     div[data-testid="stMetric"] {
         background-color: var(--secondary-background-color, #ffffff) !important;
         border: 1px solid var(--border-color, #dee2e6) !important;
-        border-radius: 4px !important;
-        padding: 10px 14px !important;
+        border-radius: 6px !important;
+        padding: 12px 16px !important;
         box-shadow: none !important;
     }
 
@@ -183,50 +212,50 @@ st.markdown(
         font-size: 0.85rem !important;
     }
 
-    /* Inputs */
-    input[type="text"], input[type="number"], .stTextInput input {
-        font-family: Arial, Helvetica, sans-serif !important;
-        border-radius: 4px !important;
-        border: 1px solid var(--border-color, #ced4da) !important;
-        color: var(--text-color) !important;
-        background-color: var(--secondary-background-color, #ffffff) !important;
-    }
-
-    /* Custom Status & Registered Cards */
+    /* Cards */
     .card-idle {
         background-color: var(--secondary-background-color, #f8f9fa);
         border: 1px solid var(--border-color, #dee2e6);
-        border-radius: 4px;
-        padding: 14px 16px;
-        margin-bottom: 15px;
+        border-radius: 6px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        color: var(--text-color);
+    }
+
+    .card-recognized {
+        background-color: rgba(25, 135, 84, 0.12);
+        border: 1px solid #198754;
+        border-radius: 6px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        color: var(--text-color);
+    }
+
+    .card-unknown {
+        background-color: rgba(220, 53, 69, 0.12);
+        border: 1px solid #dc3545;
+        border-radius: 6px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
         color: var(--text-color);
     }
 
     .card-registered {
         background-color: var(--secondary-background-color, #ffffff);
         border: 1px solid var(--border-color, #dee2e6);
-        border-radius: 4px;
-        padding: 12px 16px;
+        border-radius: 6px;
+        padding: 14px 18px;
         margin-bottom: 16px;
         color: var(--text-color);
     }
 
-    .card-recognized {
-        background-color: rgba(25, 135, 84, 0.15);
-        border: 1px solid #198754;
-        border-radius: 4px;
-        padding: 14px 16px;
-        margin-bottom: 15px;
-        color: var(--text-color);
-    }
-
-    .card-unknown {
-        background-color: rgba(220, 53, 69, 0.15);
-        border: 1px solid #dc3545;
-        border-radius: 4px;
-        padding: 14px 16px;
-        margin-bottom: 15px;
-        color: var(--text-color);
+    .camera-placeholder {
+        border: 2px dashed var(--border-color, #dee2e6);
+        border-radius: 8px;
+        padding: 60px 24px;
+        text-align: center;
+        background-color: var(--secondary-background-color, #f8f9fa);
+        margin-bottom: 16px;
     }
     </style>
     """,
@@ -240,22 +269,20 @@ st.markdown("<h1 class='main-title'>Face Detection and Recognition</h1>", unsafe
 st.markdown("<p class='main-subtitle'>Mini project</p>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 4. Sidebar Controls (Camera Source & Sensitivity)
+# 4. Sidebar Controls (Organized into separate clean sections)
 # -------------------------------------------------------------
-st.sidebar.markdown("### Settings & Controls")
-
-# Camera input method
+st.sidebar.markdown("## Camera Settings")
 default_cam_index = 1 if IS_CLOUD_ENV else 0
 camera_source = st.sidebar.radio(
-    "Camera Input Method:",
+    "Camera Input Method",
     options=["Live Webcam Stream (OpenCV)", "Browser Camera / Snapshot (Cloud & Mobile)"],
     index=default_cam_index,
-    help="Use 'Live Webcam Stream' for continuous video locally. Use 'Browser Camera' on Streamlit Cloud."
+    help="Use 'Live Webcam Stream' on your laptop. Use 'Browser Camera' on Streamlit Cloud."
 )
 
 if camera_source == "Live Webcam Stream (OpenCV)":
     camera_index = st.sidebar.number_input(
-        "Camera Index:",
+        "Camera Index",
         min_value=0,
         max_value=5,
         value=0,
@@ -265,6 +292,8 @@ if camera_source == "Live Webcam Stream (OpenCV)":
 else:
     camera_index = 0
 
+st.sidebar.markdown("---")
+st.sidebar.markdown("## Model Tuning & Thresholds")
 with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
     scale_factor = st.slider("Detection Scale Factor", min_value=1.05, max_value=1.5, value=1.1, step=0.05)
     min_neighbors = st.slider("Min Neighbors", min_value=3, max_value=10, value=5, step=1)
@@ -286,29 +315,25 @@ with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
     )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### Dataset Maintenance")
+st.sidebar.markdown("## Dataset Maintenance")
+if st.sidebar.button("Sync Dataset", key="btn_sync_embeddings", use_container_width=True):
+    with st.spinner("Generating embeddings..."):
+        try:
+            rec_net = load_face_recognizer(SFACE_MODEL_PATH)
+            embs = generate_dataset_embeddings(recognizer_net=rec_net)
+            save_embeddings(embs, EMBEDDINGS_CACHE_PATH)
+            st.sidebar.success(f"Successfully synced {len(embs)} profile(s)!")
+        except Exception as e:
+            st.sidebar.error(f"Sync error: {e}")
+
 registered_people = get_registered_users()
-
-col_sync, col_del = st.sidebar.columns(2)
-with col_sync:
-    if st.button("Sync", key="btn_sync_embeddings", use_container_width=True, help="Re-generate deep embeddings for all registered faces"):
-        with st.spinner("Generating embeddings..."):
-            try:
-                rec_net = load_face_recognizer(SFACE_MODEL_PATH)
-                embs = generate_dataset_embeddings(recognizer_net=rec_net)
-                save_embeddings(embs, EMBEDDINGS_CACHE_PATH)
-                st.sidebar.success(f"Synced {len(embs)} profile(s)!")
-            except Exception as e:
-                st.sidebar.error(f"Sync error: {e}")
-
-with col_del:
-    if registered_people:
-        with st.sidebar.expander("Remove a Person", expanded=False):
-            person_to_remove = st.selectbox("Select Person:", options=list(registered_people.keys()), key="select_del_person")
-            if st.button(f"Delete '{person_to_remove}'", key="btn_delete_person"):
-                if delete_registered_user(person_to_remove):
-                    st.sidebar.success(f"Removed {person_to_remove}.")
-                    st.rerun()
+if registered_people:
+    with st.sidebar.expander("Remove Person", expanded=False):
+        person_to_remove = st.selectbox("Select Person:", options=list(registered_people.keys()), key="select_del_person")
+        if st.button("Remove Person", key="btn_delete_person", use_container_width=True):
+            if delete_registered_user(person_to_remove):
+                st.sidebar.success(f"Removed {person_to_remove}.")
+                st.rerun()
 
 # -------------------------------------------------------------
 # 5. Session State Management
@@ -318,30 +343,37 @@ if "camera_active" not in st.session_state:
 if "mode" not in st.session_state:
     st.session_state["mode"] = "Idle"
 if "status_message" not in st.session_state:
-    st.session_state["status_message"] = "Camera is idle. Click 'Start Recognition' to begin or enter a name and click 'Register Face'."
+    st.session_state["status_message"] = "Camera is currently stopped. Choose an action above to start."
 if "last_registered" not in st.session_state:
     st.session_state["last_registered"] = None
 
 # -------------------------------------------------------------
-# 6. Main Action Controls Bar
+# 6. Controls Section (Clearly separated with sufficient width)
 # -------------------------------------------------------------
-with st.container():
-    col_input, col_b1, col_b2, col_b3, col_b4 = st.columns([2.2, 1.2, 1.4, 1.1, 1.1])
-    with col_input:
-        user_name_input = st.text_input(
-            "Person's Name:",
-            placeholder="Enter person's name to register",
-            key="input_user_name",
-            label_visibility="collapsed"
-        )
-    with col_b1:
-        btn_register = st.button("Register Face", key="btn_register_face", use_container_width=True)
-    with col_b2:
-        btn_recognize = st.button("Start Recognition", key="btn_start_recognition", use_container_width=True)
-    with col_b3:
-        btn_stop = st.button("Stop Camera", key="btn_stop_camera", use_container_width=True, type="secondary")
-    with col_b4:
-        btn_detect = st.button("Detect Faces", key="btn_detect_faces", use_container_width=True)
+# Section A: Camera & Recognition Controls
+st.markdown("### Camera & Recognition Controls")
+col_c1, col_c2, col_c3 = st.columns([1, 1, 1], gap="medium")
+with col_c1:
+    btn_recognize = st.button("Start Recognition", key="btn_start_recognition", use_container_width=True)
+with col_c2:
+    btn_detect = st.button("Face Detection Only", key="btn_detection_only", use_container_width=True)
+with col_c3:
+    btn_stop = st.button("Stop Camera", key="btn_stop_camera", use_container_width=True, type="secondary")
+
+# Section B: Registration Controls
+st.markdown("### Registration Controls")
+col_reg_in, col_reg_btn = st.columns([3, 1], gap="medium")
+with col_reg_in:
+    user_name_input = st.text_input(
+        "Person Name",
+        placeholder="Enter person's name to register (e.g. Shiva)",
+        key="input_user_name",
+        label_visibility="collapsed"
+    )
+with col_reg_btn:
+    btn_register = st.button("Register Face", key="btn_register_face", use_container_width=True)
+
+st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
 # Handle Button Click Actions
 if btn_detect:
@@ -353,7 +385,7 @@ if btn_detect:
 elif btn_register:
     clean_name = sanitize_name(user_name_input)
     if not clean_name:
-        st.error("Please enter a person's name in the text box before clicking Register Face.")
+        st.warning("Please enter a person's name in the input box before clicking Register Face.")
     else:
         st.session_state["camera_active"] = True
         st.session_state["mode"] = "Registration"
@@ -369,41 +401,51 @@ elif btn_recognize:
     else:
         st.session_state["camera_active"] = True
         st.session_state["mode"] = "Recognition"
-        st.session_state["status_message"] = "Camera active: Face recognition running."
+        st.session_state["status_message"] = "Camera active: Real-time face recognition running."
         st.rerun()
 
 elif btn_stop:
     st.session_state["camera_active"] = False
     st.session_state["mode"] = "Stopped"
-    st.session_state["status_message"] = "Camera stopped. Ready for next action."
+    st.session_state["status_message"] = "Camera is currently stopped. Choose an action above to start."
     st.rerun()
 
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
 # -------------------------------------------------------------
-# 7. Main Layout: Camera Feed (Left) & Results/Profiles (Right)
+# 7. Main Section: Camera Feed (Left) & Recognition Info (Right)
 # -------------------------------------------------------------
-col_feed, col_status = st.columns([3, 2])
+col_cam, col_info = st.columns([3, 2], gap="large")
 
-# Right Column: Recognition Result, Metrics, and Registered Persons
-with col_status:
+# Right Column: Recognition Result, Status, Metrics, Registered Persons
+with col_info:
+    # 1. Recognition Status
+    st.markdown("### Recognition Status")
+    status_card_placeholder = st.empty()
+    status_card_placeholder.markdown(
+        f"""
+        <div class="card-idle">
+            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Mode: {st.session_state['mode']}</div>
+            <div style="font-size: 0.9rem; opacity: 0.85;">{st.session_state['status_message']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # 2. Recognition Result
     st.markdown("### Recognition Result")
     result_card_placeholder = st.empty()
-
-    # Initial Result Placeholder when idle
     if not st.session_state["camera_active"]:
         result_card_placeholder.markdown(
             """
             <div class="card-idle">
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status: Camera Idle</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">Click <b>Start Recognition</b> to identify registered individuals or enter a name and click <b>Register Face</b>.</div>
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status: Inactive</div>
+                <div style="font-size: 0.9rem; opacity: 0.85;">Click <b>Start Recognition</b> above to identify faces in real time.</div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    # Metrics
-    col_m1, col_m2 = st.columns(2)
+    # 3. Detection Metrics: Faces in View & Recognized Faces
+    col_m1, col_m2 = st.columns(2, gap="medium")
     with col_m1:
         metric_face_count = st.empty()
         metric_face_count.metric(label="Faces in View", value=0)
@@ -411,16 +453,15 @@ with col_status:
         metric_known_count = st.empty()
         metric_known_count.metric(label="Recognized Faces", value=0)
 
-    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-    # Registered Persons Section
+    # 4. Registered Persons list
     st.markdown("### Registered Persons")
     reg_people_box = st.empty()
-
     current_registered = get_registered_users()
     if current_registered:
         profiles_list = "".join([
-            f"<div style='padding: 6px 0; border-bottom: 1px solid var(--border-color, rgba(128,128,128,0.2)); font-size: 0.95rem;'>"
+            f"<div style='padding: 8px 0; border-bottom: 1px solid var(--border-color, rgba(128,128,128,0.2)); font-size: 0.95rem;'>"
             f"<b>{name}</b> &nbsp;—&nbsp; <span style='opacity: 0.85;'>{count} saved sample(s)</span></div>"
             for name, count in current_registered.items()
         ])
@@ -442,23 +483,12 @@ with col_status:
             unsafe_allow_html=True
         )
 
-    # Collapsible Instructions & Details
-    with st.expander("User Instructions", expanded=False):
-        st.markdown(
-            """
-            1. **Register Face**: Enter a name in the text box above and click **Register Face**. Look at the webcam until samples are captured.
-            2. **Start Recognition**: Click **Start Recognition**. Recognized faces will be outlined in a **green box** with their name and match percentage.
-            3. **Unknown Faces**: Unrecognized individuals are outlined in a **red box** marked **Unknown Person**.
-            4. **Stop Camera**: Click **Stop Camera** anytime to pause the stream.
-            """
-        )
-
-# Left Column: Camera Feed and Video Processing
-with col_feed:
+# Left Column: Large Camera Feed
+with col_cam:
     st.markdown("### Camera Feed")
     video_placeholder = st.empty()
 
-    # Registration success banner with preview thumbnails
+    # Success message banner when a person is registered
     if st.session_state.get("last_registered"):
         reg_info = st.session_state["last_registered"]
         st.success(
@@ -466,14 +496,22 @@ with col_feed:
         )
         if reg_info.get("previews"):
             st.write("Saved Face Samples Preview:")
-            preview_cols = st.columns(len(reg_info["previews"]))
+            preview_cols = st.columns(min(4, len(reg_info["previews"])), gap="small")
             for idx, p_col in enumerate(preview_cols):
                 with p_col:
                     st.image(reg_info["previews"][idx], caption=f"Sample {idx + 1}", use_container_width=True)
 
-    # Standby state when camera is idle
+    # Standby state when camera is inactive (No massive blank area)
     if not st.session_state["camera_active"]:
-        video_placeholder.info(f"Status: {st.session_state['status_message']}")
+        video_placeholder.markdown(
+            """
+            <div class="camera-placeholder">
+                <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Camera is currently stopped</p>
+                <p style="font-size: 0.95rem; opacity: 0.85; margin: 0; color: var(--text-color);">Click <b>Start Recognition</b> or <b>Face Detection Only</b> above to activate the camera.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 
 # Helper: Render Browser Camera Flow (for Streamlit Cloud and Mobile Browsers)
@@ -487,13 +525,14 @@ def render_browser_camera_flow(
     metric_face_count,
     metric_known_count,
     result_card_placeholder,
+    status_card_placeholder,
     target_name=None,
     target_samples=20
 ):
     st.markdown(f"#### {mode} (Browser Camera Mode)")
     st.caption("Capture a photo using your device camera or upload an image file:")
 
-    col_cam_in, col_file_in = st.columns(2)
+    col_cam_in, col_file_in = st.columns(2, gap="medium")
     with col_cam_in:
         cam_shot = st.camera_input("Take photo with webcam:", key=f"browser_cam_{mode}")
     with col_file_in:
@@ -665,6 +704,7 @@ if st.session_state["camera_active"]:
             metric_face_count=metric_face_count,
             metric_known_count=metric_known_count,
             result_card_placeholder=result_card_placeholder,
+            status_card_placeholder=status_card_placeholder,
             target_name=st.session_state.get("target_name"),
             target_samples=st.session_state.get("target_samples", 20)
         )
@@ -689,6 +729,7 @@ if st.session_state["camera_active"]:
                 metric_face_count=metric_face_count,
                 metric_known_count=metric_known_count,
                 result_card_placeholder=result_card_placeholder,
+                status_card_placeholder=status_card_placeholder,
                 target_name=st.session_state.get("target_name"),
                 target_samples=st.session_state.get("target_samples", 20)
             )
