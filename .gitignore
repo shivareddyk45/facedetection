@@ -1,0 +1,71 @@
+# ====================================================================
+# Face Detection and Recognition Project - Git Ignore
+# ====================================================================
+
+# 1. Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# 2. Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 3. Environment Variables, API Keys & Credentials
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.cert
+credentials.json
+client_secret*.json
+
+# 4. OS Temporary & Metadata Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 5. IDE & Editor Metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 6. Face Datasets & Personal Face Images
+# Keeps the folder structure in Git via .gitkeep, but ignores all personal face photos
+data/faces/*
+!data/faces/.gitkeep
+data/face_*.jpg
+
+# 7. Model Cache & Generated Embeddings
+# Embeddings pickle contains private user face prototypes
+models/embeddings.pkl
+!models/.gitkeep
