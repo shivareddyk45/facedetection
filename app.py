@@ -58,21 +58,37 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Global Typography & Black Text Color */
-    html, body, [class*="css"], .stApp, .stApp * {
-        font-family: Arial, Helvetica, sans-serif !important;
-        color: #000000 !important;
+    /* CSS Variables for Dynamic Light & Dark Background Adaptability */
+    :root {
+        --text-color: #212529;
+        --background-color: #f8f9fa;
+        --secondary-background-color: #ffffff;
+        --border-color: #dee2e6;
     }
 
-    /* Explicitly override Streamlit Markdown, text, and labels */
-    .stMarkdown, .stMarkdown *, p, span, div, label, li, a, caption, .stCaption {
-        color: #000000 !important;
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-color: #f8f9fa;
+            --background-color: #0e1117;
+            --secondary-background-color: #1e232b;
+            --border-color: #30363d;
+        }
+    }
+
+    /* Base Typography: Arial font, text color matches the background theme */
+    html, body, [class*="css"], .stApp {
+        font-family: Arial, Helvetica, sans-serif !important;
+    }
+
+    /* Ensure text color adapts dynamically to light or dark background */
+    .stApp, .stApp p, .stApp span, .stApp div, .stApp label, .stApp li, .stApp a {
+        color: var(--text-color) !important;
     }
 
     /* Headings */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
         font-weight: 600 !important;
     }
 
@@ -80,7 +96,7 @@ st.markdown(
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 2.2rem !important;
         font-weight: 700 !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
         margin-bottom: 2px !important;
         letter-spacing: -0.5px;
     }
@@ -88,7 +104,8 @@ st.markdown(
     .main-subtitle {
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 1.1rem !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
+        opacity: 0.85;
         margin-top: 0px !important;
         margin-bottom: 20px !important;
         font-weight: normal !important;
@@ -96,16 +113,15 @@ st.markdown(
 
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #ffffff !important;
-        border-right: 1px solid #dee2e6 !important;
+        border-right: 1px solid var(--border-color, #dee2e6) !important;
     }
 
     section[data-testid="stSidebar"] * {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
     }
 
-    /* Simple, Clean Blue Buttons (Keep text white for contrast) */
+    /* Action Buttons (Keep high contrast: white text on solid blue/gray) */
     div.stButton > button, div.stButton > button *, div.stButton > button p {
         background-color: #0d6efd !important;
         color: #ffffff !important;
@@ -146,8 +162,8 @@ st.markdown(
 
     /* Clean Metric Boxes */
     div[data-testid="stMetric"] {
-        background-color: #ffffff !important;
-        border: 1px solid #dee2e6 !important;
+        background-color: var(--secondary-background-color, #ffffff) !important;
+        border: 1px solid var(--border-color, #dee2e6) !important;
         border-radius: 4px !important;
         padding: 10px 14px !important;
         box-shadow: none !important;
@@ -155,34 +171,62 @@ st.markdown(
 
     div[data-testid="stMetricValue"], div[data-testid="stMetricValue"] * {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
         font-weight: 700 !important;
         font-size: 1.5rem !important;
     }
 
     div[data-testid="stMetricLabel"], div[data-testid="stMetricLabel"] * {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: #000000 !important;
+        color: var(--text-color) !important;
+        opacity: 0.8;
         font-size: 0.85rem !important;
-    }
-
-    /* Clean Card Containers */
-    .clean-box {
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 16px;
-        margin-bottom: 16px;
-        color: #000000 !important;
     }
 
     /* Inputs */
     input[type="text"], input[type="number"], .stTextInput input {
         font-family: Arial, Helvetica, sans-serif !important;
         border-radius: 4px !important;
-        border: 1px solid #ced4da !important;
-        color: #000000 !important;
-        background-color: #ffffff !important;
+        border: 1px solid var(--border-color, #ced4da) !important;
+        color: var(--text-color) !important;
+        background-color: var(--secondary-background-color, #ffffff) !important;
+    }
+
+    /* Custom Status & Registered Cards */
+    .card-idle {
+        background-color: var(--secondary-background-color, #f8f9fa);
+        border: 1px solid var(--border-color, #dee2e6);
+        border-radius: 4px;
+        padding: 14px 16px;
+        margin-bottom: 15px;
+        color: var(--text-color);
+    }
+
+    .card-registered {
+        background-color: var(--secondary-background-color, #ffffff);
+        border: 1px solid var(--border-color, #dee2e6);
+        border-radius: 4px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        color: var(--text-color);
+    }
+
+    .card-recognized {
+        background-color: rgba(25, 135, 84, 0.15);
+        border: 1px solid #198754;
+        border-radius: 4px;
+        padding: 14px 16px;
+        margin-bottom: 15px;
+        color: var(--text-color);
+    }
+
+    .card-unknown {
+        background-color: rgba(220, 53, 69, 0.15);
+        border: 1px solid #dc3545;
+        border-radius: 4px;
+        padding: 14px 16px;
+        margin-bottom: 15px;
+        color: var(--text-color);
     }
     </style>
     """,
@@ -350,9 +394,9 @@ with col_status:
     if not st.session_state["camera_active"]:
         result_card_placeholder.markdown(
             """
-            <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px; color: #000000;">Status: Camera Idle</div>
-                <div style="font-size: 0.9rem; color: #000000;">Click <b>Start Recognition</b> to identify registered individuals or enter a name and click <b>Register Face</b>.</div>
+            <div class="card-idle">
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status: Camera Idle</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Click <b>Start Recognition</b> to identify registered individuals or enter a name and click <b>Register Face</b>.</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -376,13 +420,13 @@ with col_status:
     current_registered = get_registered_users()
     if current_registered:
         profiles_list = "".join([
-            f"<div style='padding: 6px 0; border-bottom: 1px solid #e9ecef; font-size: 0.95rem; color: #000000;'>"
-            f"<b>{name}</b> &nbsp;—&nbsp; <span style='color: #000000;'>{count} saved sample(s)</span></div>"
+            f"<div style='padding: 6px 0; border-bottom: 1px solid var(--border-color, rgba(128,128,128,0.2)); font-size: 0.95rem;'>"
+            f"<b>{name}</b> &nbsp;—&nbsp; <span style='opacity: 0.85;'>{count} saved sample(s)</span></div>"
             for name, count in current_registered.items()
         ])
         reg_people_box.markdown(
             f"""
-            <div style="background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #000000;">
+            <div class="card-registered">
                 {profiles_list}
             </div>
             """,
@@ -391,7 +435,7 @@ with col_status:
     else:
         reg_people_box.markdown(
             """
-            <div style="background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #000000;">
+            <div class="card-registered" style="opacity: 0.85;">
                 No persons registered yet. Enter a name above and click <b>Register Face</b>.
             </div>
             """,
@@ -533,24 +577,24 @@ def render_browser_camera_flow(
             if len(faces) == 0:
                 result_card_placeholder.markdown(
                     """
-                    <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                        <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px; color: #000000;">Status</div>
-                        <div style="color: #000000;">No face detected in the captured photo.</div>
+                    <div class="card-idle">
+                        <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status</div>
+                        <div style="opacity: 0.9;">No face detected in the captured photo.</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             elif known_count > 0:
                 matches_html = "".join([
-                    f"<div style='font-size: 1.25rem; font-weight: bold; margin-bottom: 4px; color: #000000;'>{n} ({c:.1f}%)</div>"
+                    f"<div style='font-size: 1.25rem; font-weight: bold; margin-bottom: 4px;'>{n} ({c:.1f}%)</div>"
                     for n, c, k in recognized_cards if k
                 ])
                 result_card_placeholder.markdown(
                     f"""
-                    <div style="background-color: #d1e7dd; border: 1px solid #badbcc; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #000000;">Recognized Person</div>
+                    <div class="card-recognized">
+                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #198754;">Recognized Person</div>
                         {matches_html}
-                        <div style="font-size: 0.9rem; margin-top: 4px; color: #000000;">Status: Identity verified with deep face embeddings</div>
+                        <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Identity verified with deep face embeddings</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -558,10 +602,10 @@ def render_browser_camera_flow(
             else:
                 result_card_placeholder.markdown(
                     """
-                    <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #000000;">Unknown Person</div>
-                        <div style="font-size: 1.25rem; font-weight: bold; margin-bottom: 4px; color: #000000;">Unknown Person</div>
-                        <div style="font-size: 0.9rem; margin-top: 4px; color: #000000;">Status: Face does not match any registered person</div>
+                    <div class="card-unknown">
+                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #dc3545;">Unknown Person</div>
+                        <div style="font-size: 1.25rem; font-weight: bold; margin-bottom: 4px;">Unknown Person</div>
+                        <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Face does not match any registered person</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -734,24 +778,24 @@ if st.session_state["camera_active"]:
                         if len(faces) == 0:
                             result_card_placeholder.markdown(
                                 """
-                                <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px; color: #000000;">Status</div>
-                                    <div style="color: #000000;">No face detected in camera view.</div>
+                                <div class="card-idle">
+                                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status</div>
+                                    <div style="opacity: 0.9;">No face detected in camera view.</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
                             )
                         elif known_count > 0:
                             matches_html = "".join([
-                                f"<div style='font-size: 1.3rem; font-weight: bold; margin-bottom: 4px; color: #000000;'>{n} ({c:.1f}%)</div>"
+                                f"<div style='font-size: 1.3rem; font-weight: bold; margin-bottom: 4px;'>{n} ({c:.1f}%)</div>"
                                 for n, c, k in recognized_cards if k
                             ])
                             result_card_placeholder.markdown(
                                 f"""
-                                <div style="background-color: #d1e7dd; border: 1px solid #badbcc; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #000000;">Recognized Person</div>
+                                <div class="card-recognized">
+                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #198754;">Recognized Person</div>
                                     {matches_html}
-                                    <div style="font-size: 0.9rem; margin-top: 4px; color: #000000;">Status: Identity verified with deep face embeddings</div>
+                                    <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Identity verified with deep face embeddings</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -759,10 +803,10 @@ if st.session_state["camera_active"]:
                         else:
                             result_card_placeholder.markdown(
                                 """
-                                <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #000000; padding: 14px 16px; border-radius: 4px; margin-bottom: 15px;">
-                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #000000;">Unknown Person</div>
-                                    <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 4px; color: #000000;">Unknown Person</div>
-                                    <div style="font-size: 0.9rem; margin-top: 4px; color: #000000;">Status: Face does not match any registered person</div>
+                                <div class="card-unknown">
+                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #dc3545;">Unknown Person</div>
+                                    <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 4px;">Unknown Person</div>
+                                    <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Face does not match any registered person</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -899,4 +943,4 @@ if st.session_state["camera_active"]:
 # 9. Clean Footer
 # -------------------------------------------------------------
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-st.markdown("<p style='color: #000000; font-size: 0.85rem;'>Face Detection and Recognition | Mini project</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: var(--text-color); opacity: 0.8; font-size: 0.85rem;'>Face Detection and Recognition | Mini project</p>", unsafe_allow_html=True)
