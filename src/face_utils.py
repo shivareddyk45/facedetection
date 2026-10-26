@@ -80,22 +80,59 @@ def detect_faces(frame: np.ndarray, face_cascade, scale_factor: float = 1.1, min
 
 def draw_faces(frame: np.ndarray, faces, color: tuple = (0, 255, 0), thickness: int = 2, custom_label: str = None):
     """
-    Draw bounding boxes and labels around detected faces on the frame.
+    Draw bounding boxes and high-contrast labels around detected faces on the frame.
+
+    In Face Detection Only mode, faces are numbered: Face 1, Face 2, Face 3, etc.
+    Labels are displayed inside a filled contrasting badge positioned above each face
+    rectangle so they never overlap the face.
     """
     annotated = frame.copy()
 
-    for i, (x, y, w, h) in enumerate(faces):
+    sorted_faces = list(faces)
+    if len(sorted_faces) > 1 and custom_label is None:
+        sorted_faces.sort(key=lambda b: (b[0], b[1]))
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    text_thickness = 2
+
+    for i, (x, y, w, h) in enumerate(sorted_faces):
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        # 1. Draw rectangle around each detected face
         cv2.rectangle(annotated, (x, y), (x + w, y + h), color, thickness)
+
+        # 2. Assign Face 1, Face 2, Face 3...
         label = custom_label if custom_label else f"Face {i + 1}"
-        label_pos = (x, max(y - 10, 20))
+
+        # 3. Compute badge dimensions
+        (label_w, label_h), baseline = cv2.getTextSize(label, font, font_scale, text_thickness)
+
+        # 4. Position badge above rectangle without overlapping the face
+        if y - label_h - 12 >= 0:
+            badge_y1 = y - label_h - 12
+            badge_y2 = y
+            text_y = y - 5
+        else:
+            badge_y1 = y + h
+            badge_y2 = y + h + label_h + 12
+            text_y = y + h + label_h + 6
+
+        badge_x1 = x
+        badge_x2 = max(x + w, x + label_w + 14)
+
+        # 5. Draw contrasting background badge
+        cv2.rectangle(annotated, (badge_x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
+
+        # 6. Draw high-contrast text on badge (black text on green badge)
+        text_color = (0, 0, 0) if color == (0, 255, 0) else (255, 255, 255)
         cv2.putText(
             annotated,
             label,
-            label_pos,
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            color,
-            2,
+            (x + 6, text_y),
+            font,
+            font_scale,
+            text_color,
+            text_thickness,
             cv2.LINE_AA
         )
 
@@ -561,20 +598,39 @@ def draw_recognition_results(frame: np.ndarray, recognitions: list) -> np.ndarra
     Draw bounding boxes and recognition badge headers.
 
     Requirements:
-    - Registered / Recognized face: Green box + Green badge with '{Name} ({Confidence:.1f}%)'
-    - Unknown face: Red box + Red badge with 'Unknown Person'
+    - Registered / Recognized face: Green box + Green badge with 'Face X - {Name}'
+    - Unknown face: Red box + Red badge with 'Face Y - Unknown Person'
+    - Labels positioned above each rectangle without overlapping the face.
 
     Args:
         frame (np.ndarray): Video frame.
         recognitions (list): List of recognition result tuples or dicts containing:
-            (x, y, w, h, name, score_or_confidence, is_known, [optional label]).
+            (x, y, w, h, name, score_or_confidence, is_known, [optional label], [optional face_num]).
 
     Returns:
         np.ndarray: Annotated video frame.
     """
     annotated = frame.copy()
 
-    for item in recognitions:
+    # Sort recognitions left-to-right to ensure stable numbering across frames
+    sorted_recs = list(recognitions)
+    def _get_x(item):
+        if isinstance(item, dict):
+            b = item.get("box", (item.get("x", 0), item.get("y", 0)))
+            return (b[0], b[1]) if isinstance(b, (tuple, list)) else (0, 0)
+        elif isinstance(item, (tuple, list)):
+            return (item[0], item[1])
+        return (0, 0)
+
+    if len(sorted_recs) > 1:
+        sorted_recs.sort(key=_get_x)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    thickness = 2
+
+    for idx, item in enumerate(sorted_recs):
+        default_face_num = idx + 1
         # Extract fields safely whether item is dict or tuple/list
         if isinstance(item, dict):
             box = item.get("box", (item.get("x", 0), item.get("y", 0), item.get("w", 0), item.get("h", 0)))
@@ -582,26 +638,31 @@ def draw_recognition_results(frame: np.ndarray, recognitions: list) -> np.ndarra
             name = str(item.get("name", "Unknown Person"))
             score = float(item.get("score", item.get("confidence", 0.0)))
             is_known = bool(item.get("is_known", False))
+            custom_lbl = item.get("label", None)
+            face_num = int(item.get("face_num", default_face_num))
         elif isinstance(item, (tuple, list)):
             x, y, w, h = int(item[0]), int(item[1]), int(item[2]), int(item[3])
             name = str(item[4]) if len(item) > 4 else "Unknown Person"
             score = float(item[5]) if len(item) > 5 else 0.0
             is_known = bool(item[6]) if len(item) > 6 else False
+            custom_lbl = str(item[7]) if len(item) > 7 and item[7] is not None else None
+            face_num = int(item[8]) if len(item) > 8 else default_face_num
         else:
             continue
 
-        # Convert score to percentage if passed as decimal fraction <= 1.0
-        conf_pct = score * 100.0 if score <= 1.0 else score
+        # Clean label construction adhering to requirements:
+        # Examples: "Face 1 - Shiva", "Face 2 - Unknown Person", "Face 3 - Leela"
+        if custom_lbl:
+            display_label = custom_lbl
+        elif is_known and name and name != "Unknown Person":
+            display_label = f"Face {face_num} - {name}"
+        else:
+            display_label = f"Face {face_num} - Unknown Person"
 
-        # Clean label construction strictly adhering to requirements:
-        # - Recognized: "{Name} ({Confidence:.1f}%)"
-        # - Unknown:    "Unknown Person"
         if is_known and name and name != "Unknown Person":
-            display_label = f"{name} ({conf_pct:.1f}%)"
             box_color = (0, 255, 0)      # Green rectangle for recognized face
             text_color = (0, 0, 0)       # Black text on green badge for maximum legibility
         else:
-            display_label = "Unknown Person"
             box_color = (0, 0, 255)      # Red rectangle for unknown face
             text_color = (255, 255, 255) # White text on red badge
 
@@ -609,16 +670,13 @@ def draw_recognition_results(frame: np.ndarray, recognitions: list) -> np.ndarra
         cv2.rectangle(annotated, (x, y), (x + w, y + h), box_color, 2)
 
         # 2. Compute badge size
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        thickness = 2
         (label_w, label_h), baseline = cv2.getTextSize(display_label, font, font_scale, thickness)
 
         # 3. Position badge above bounding box (or below if too close to top edge of frame)
         if y - label_h - 12 >= 0:
             badge_y1 = y - label_h - 12
             badge_y2 = y
-            text_y = y - 6
+            text_y = y - 5
         else:
             badge_y1 = y + h
             badge_y2 = y + h + label_h + 12

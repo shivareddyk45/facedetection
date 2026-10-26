@@ -488,6 +488,8 @@ def render_browser_camera_flow(
 
         if mode == "Face Detection":
             faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+            if len(faces) > 1:
+                faces = sorted(faces, key=lambda b: (b[0], b[1]))
             metric_face_count.metric(label="Faces detected", value=len(faces))
             metric_known_count.metric(label="Recognized faces", value=0)
             annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
@@ -497,18 +499,22 @@ def render_browser_camera_flow(
                 result_card_placeholder.markdown(
                     """
                     <div class="clean-card">
-                        <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
                         <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             else:
+                faces_html = "".join([
+                    f"<div style='font-size: 1.05rem; font-weight: 500; color: #0f5132; padding: 3px 0;'>Face {i + 1}</div>"
+                    for i in range(len(faces))
+                ])
                 result_card_placeholder.markdown(
                     f"""
                     <div class="clean-card">
-                        <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
-                        <div style="font-size: 0.95rem; color: #0f5132;">Faces detected: <b>{len(faces)}</b> (Recognition disabled in Detection Only mode).</div>
+                        <div style="font-weight: 600; margin-bottom: 6px;">Faces Detected: {len(faces)}</div>
+                        {faces_html}
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -532,6 +538,8 @@ def render_browser_camera_flow(
                 return
 
             faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+            if len(faces) > 1:
+                faces = sorted(faces, key=lambda b: (b[0], b[1]))
             metric_face_count.metric(label="Faces detected", value=len(faces))
 
             recognitions = []
@@ -539,6 +547,7 @@ def render_browser_camera_flow(
             recognized_cards = []
 
             for idx, (x, y, w, h) in enumerate(faces):
+                face_num = idx + 1
                 face_crop = crop_face(frame, (x, y, w, h), target_size=(112, 112))
                 res = recognize_face(
                     face_crop,
@@ -561,15 +570,15 @@ def render_browser_camera_flow(
                 confidence = score * 100.0 if score <= 1.0 else score
                 if is_known and name and name != "Unknown Person":
                     known_count += 1
-                    label = f"{name} ({confidence:.1f}%)"
-                    recognized_cards.append((name, confidence, True))
+                    label = f"Face {face_num} - {name}"
+                    recognized_cards.append((face_num, name, confidence, True))
                 else:
                     name = "Unknown Person"
                     is_known = False
-                    label = "Unknown Person"
-                    recognized_cards.append(("Unknown Person", confidence, False))
+                    label = f"Face {face_num} - Unknown Person"
+                    recognized_cards.append((face_num, "Unknown Person", confidence, False))
 
-                recognitions.append((x, y, w, h, name, confidence, is_known, label))
+                recognitions.append((x, y, w, h, name, confidence, is_known, label, face_num))
 
             metric_known_count.metric(label="Recognized faces", value=known_count)
             annotated = draw_recognition_results(frame, recognitions)
@@ -586,29 +595,23 @@ def render_browser_camera_flow(
                     """,
                     unsafe_allow_html=True
                 )
-            elif known_count > 0:
+            else:
                 matches_html = "".join([
-                    f"<div style='margin-bottom: 6px;'>"
-                    f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>Name: {n}</div>"
-                    f"<div style='font-size: 0.95rem; color: #198754;'>Confidence: {c:.1f}%</div>"
+                    f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
+                    f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n}</div>"
+                    f"<div style='font-size: 0.85rem; color: #198754;'>Confidence: {c:.1f}%</div>"
                     f"</div>"
-                    for n, c, k in recognized_cards if k
+                    if k else
+                    f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
+                    f"<div style='font-size: 1.05rem; font-weight: bold; color: #842029;'>Face {fnum} — Unknown Person</div>"
+                    f"</div>"
+                    for fnum, n, c, k in recognized_cards
                 ])
                 result_card_placeholder.markdown(
                     f"""
-                    <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                        <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 6px;">Recognized Person</div>
+                    <div class="clean-card">
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #212529; margin-bottom: 8px;">Recognition Results ({len(faces)} face(s)):</div>
                         {matches_html}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            else:
-                result_card_placeholder.markdown(
-                    """
-                    <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                        <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person</div>
-                        <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -735,6 +738,8 @@ if st.session_state["camera_active"]:
                             break
 
                         faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+                        if len(faces) > 1:
+                            faces = sorted(faces, key=lambda b: (b[0], b[1]))
                         metric_face_count.metric(label="Faces detected", value=len(faces))
 
                         recognitions = []
@@ -742,6 +747,7 @@ if st.session_state["camera_active"]:
                         recognized_cards = []
 
                         for idx, (x, y, w, h) in enumerate(faces):
+                            face_num = idx + 1
                             face_crop = crop_face(frame, (x, y, w, h), target_size=(112, 112))
                             res = recognize_face(
                                 face_crop,
@@ -764,18 +770,18 @@ if st.session_state["camera_active"]:
 
                             confidence = score * 100.0 if score <= 1.0 else score
 
-                            # Bounding box label: '{Name} ({confidence:.1f}%)' or 'Unknown Person'
+                            # Bounding box label: 'Face X - {Name}' or 'Face Y - Unknown Person'
                             if is_known and name and name != "Unknown Person":
                                 known_count += 1
-                                label = f"{name} ({confidence:.1f}%)"
-                                recognized_cards.append((name, confidence, True))
+                                label = f"Face {face_num} - {name}"
+                                recognized_cards.append((face_num, name, confidence, True))
                             else:
                                 name = "Unknown Person"
                                 is_known = False
-                                label = "Unknown Person"
-                                recognized_cards.append(("Unknown Person", confidence, False))
+                                label = f"Face {face_num} - Unknown Person"
+                                recognized_cards.append((face_num, "Unknown Person", confidence, False))
 
-                            recognitions.append((x, y, w, h, name, confidence, is_known, label))
+                            recognitions.append((x, y, w, h, name, confidence, is_known, label, face_num))
 
                         metric_known_count.metric(label="Recognized faces", value=known_count)
 
@@ -790,29 +796,23 @@ if st.session_state["camera_active"]:
                                 """,
                                 unsafe_allow_html=True
                             )
-                        elif known_count > 0:
+                        else:
                             matches_html = "".join([
-                                f"<div style='margin-bottom: 6px;'>"
-                                f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>Name: {n}</div>"
-                                f"<div style='font-size: 0.95rem; color: #198754;'>Confidence: {c:.1f}%</div>"
+                                f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
+                                f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n}</div>"
+                                f"<div style='font-size: 0.85rem; color: #198754;'>Confidence: {c:.1f}%</div>"
                                 f"</div>"
-                                for n, c, k in recognized_cards if k
+                                if k else
+                                f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
+                                f"<div style='font-size: 1.05rem; font-weight: bold; color: #842029;'>Face {fnum} — Unknown Person</div>"
+                                f"</div>"
+                                for fnum, n, c, k in recognized_cards
                             ])
                             result_card_placeholder.markdown(
                                 f"""
-                                <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                                    <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 6px;">Recognized Person</div>
+                                <div class="clean-card">
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: #212529; margin-bottom: 8px;">Recognition Results ({len(faces)} face(s)):</div>
                                     {matches_html}
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-                        else:
-                            result_card_placeholder.markdown(
-                                """
-                                <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                                    <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person</div>
-                                    <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -935,6 +935,8 @@ if st.session_state["camera_active"]:
                             scale_factor=scale_factor,
                             min_neighbors=min_neighbors
                         )
+                        if len(faces) > 1:
+                            faces = sorted(faces, key=lambda b: (b[0], b[1]))
 
                         annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
                         frame_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
@@ -946,18 +948,22 @@ if st.session_state["camera_active"]:
                             result_card_placeholder.markdown(
                                 """
                                 <div class="clean-card">
-                                    <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                                    <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
                                     <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
                             )
                         else:
+                            faces_html = "".join([
+                                f"<div style='font-size: 1.05rem; font-weight: 500; color: #0f5132; padding: 3px 0;'>Face {i + 1}</div>"
+                                for i in range(len(faces))
+                            ])
                             result_card_placeholder.markdown(
                                 f"""
                                 <div class="clean-card">
-                                    <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
-                                    <div style="font-size: 0.95rem; color: #0f5132;">Faces detected: <b>{len(faces)}</b> (Recognition disabled in Detection Only mode).</div>
+                                    <div style="font-weight: 600; margin-bottom: 6px;">Faces Detected: {len(faces)}</div>
+                                    {faces_html}
                                 </div>
                                 """,
                                 unsafe_allow_html=True
