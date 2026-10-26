@@ -366,27 +366,27 @@ col_cam, col_info = st.columns([3, 2], gap="large")
 with col_info:
     st.markdown("### Recognition Results")
 
-    # 1. Recognition Status
+    # 1. Camera Status
     status_card_placeholder = st.empty()
+    cam_status_str = "Running" if st.session_state["camera_active"] else "Stopped"
     status_card_placeholder.markdown(
         f"""
         <div class="clean-card">
-            <div style="font-weight: 600; margin-bottom: 2px;">Recognition Status</div>
-            <div style="font-size: 0.95rem; color: #495057;">Mode: <b>{st.session_state['mode']}</b></div>
-            <div style="font-size: 0.85rem; color: #6c757d; margin-top: 2px;">{st.session_state['status_message']}</div>
+            <div style="font-size: 0.95rem;"><b>Camera status:</b> <span style="color: {'#0d6efd' if st.session_state['camera_active'] else '#6c757d'}; font-weight: 600;">{cam_status_str}</span></div>
+            <div style="font-size: 0.9rem; color: #495057; margin-top: 2px;">Mode: <b>{st.session_state['mode']}</b></div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # 2. Metrics: Faces in View & Recognized Faces
+    # 2. Metrics: Faces detected & Recognized faces
     col_m1, col_m2 = st.columns(2, gap="small")
     with col_m1:
         metric_face_count = st.empty()
-        metric_face_count.metric(label="Faces in View", value=0)
+        metric_face_count.metric(label="Faces detected", value=0)
     with col_m2:
         metric_known_count = st.empty()
-        metric_known_count.metric(label="Recognized Faces", value=0)
+        metric_known_count.metric(label="Recognized faces", value=0)
 
     # 3. Current recognized person's name and confidence
     result_card_placeholder = st.empty()
@@ -394,7 +394,7 @@ with col_info:
         result_card_placeholder.markdown(
             """
             <div class="clean-card">
-                <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
                 <div style="font-size: 0.95rem; color: #6c757d;">Camera is currently stopped.</div>
             </div>
             """,
@@ -488,9 +488,31 @@ def render_browser_camera_flow(
 
         if mode == "Face Detection":
             faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-            metric_face_count.metric(label="Faces in View", value=len(faces))
+            metric_face_count.metric(label="Faces detected", value=len(faces))
+            metric_known_count.metric(label="Recognized faces", value=0)
             annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
             st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
+
+            if len(faces) == 0:
+                result_card_placeholder.markdown(
+                    """
+                    <div class="clean-card">
+                        <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                        <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                result_card_placeholder.markdown(
+                    f"""
+                    <div class="clean-card">
+                        <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
+                        <div style="font-size: 0.95rem; color: #0f5132;">Faces detected: <b>{len(faces)}</b> (Recognition disabled in Detection Only mode).</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
         elif mode == "Recognition":
             try:
@@ -510,7 +532,7 @@ def render_browser_camera_flow(
                 return
 
             faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-            metric_face_count.metric(label="Faces in View", value=len(faces))
+            metric_face_count.metric(label="Faces detected", value=len(faces))
 
             recognitions = []
             known_count = 0
@@ -529,6 +551,10 @@ def render_browser_camera_flow(
                     name = res[0]
                     score = res[1]
                     is_known = res[2] if len(res) > 2 else False
+                elif isinstance(res, dict):
+                    name = res.get("name", "Unknown Person")
+                    score = res.get("score", res.get("confidence", 0.0))
+                    is_known = res.get("is_known", False)
                 else:
                     name, score, is_known = "Unknown Person", 0.0, False
 
@@ -545,7 +571,7 @@ def render_browser_camera_flow(
 
                 recognitions.append((x, y, w, h, name, confidence, is_known, label))
 
-            metric_known_count.metric(label="Recognized Faces", value=known_count)
+            metric_known_count.metric(label="Recognized faces", value=known_count)
             annotated = draw_recognition_results(frame, recognitions)
             st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption="Recognition Result", use_container_width=True)
 
@@ -554,21 +580,24 @@ def render_browser_camera_flow(
                 result_card_placeholder.markdown(
                     """
                     <div class="clean-card">
-                        <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
-                        <div style="font-size: 0.95rem; color: #6c757d;">No face detected in the captured photo.</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                        <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             elif known_count > 0:
                 matches_html = "".join([
-                    f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>{n} ({c:.1f}%)</div>"
+                    f"<div style='margin-bottom: 6px;'>"
+                    f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>Name: {n}</div>"
+                    f"<div style='font-size: 0.95rem; color: #198754;'>Confidence: {c:.1f}%</div>"
+                    f"</div>"
                     for n, c, k in recognized_cards if k
                 ])
                 result_card_placeholder.markdown(
                     f"""
                     <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                        <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 4px;">Recognized Person:</div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 6px;">Recognized Person</div>
                         {matches_html}
                     </div>
                     """,
@@ -578,7 +607,7 @@ def render_browser_camera_flow(
                 result_card_placeholder.markdown(
                     """
                     <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                        <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person:</div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person</div>
                         <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                     </div>
                     """,
@@ -706,7 +735,7 @@ if st.session_state["camera_active"]:
                             break
 
                         faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-                        metric_face_count.metric(label="Faces in View", value=len(faces))
+                        metric_face_count.metric(label="Faces detected", value=len(faces))
 
                         recognitions = []
                         known_count = 0
@@ -748,28 +777,31 @@ if st.session_state["camera_active"]:
 
                             recognitions.append((x, y, w, h, name, confidence, is_known, label))
 
-                        metric_known_count.metric(label="Recognized Faces", value=known_count)
+                        metric_known_count.metric(label="Recognized faces", value=known_count)
 
                         # Update Recognition Result card beside the camera
                         if len(faces) == 0:
                             result_card_placeholder.markdown(
                                 """
                                 <div class="clean-card">
-                                    <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
-                                    <div style="font-size: 0.95rem; color: #6c757d;">No face detected in camera view.</div>
+                                    <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                                    <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
                             )
                         elif known_count > 0:
                             matches_html = "".join([
-                                f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>{n} ({c:.1f}%)</div>"
+                                f"<div style='margin-bottom: 6px;'>"
+                                f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>Name: {n}</div>"
+                                f"<div style='font-size: 0.95rem; color: #198754;'>Confidence: {c:.1f}%</div>"
+                                f"</div>"
                                 for n, c, k in recognized_cards if k
                             ])
                             result_card_placeholder.markdown(
                                 f"""
                                 <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                                    <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 4px;">Recognized Person:</div>
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 6px;">Recognized Person</div>
                                     {matches_html}
                                 </div>
                                 """,
@@ -779,7 +811,7 @@ if st.session_state["camera_active"]:
                             result_card_placeholder.markdown(
                                 """
                                 <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
-                                    <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person:</div>
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person</div>
                                     <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                                 </div>
                                 """,
@@ -819,7 +851,8 @@ if st.session_state["camera_active"]:
                             break
 
                         faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-                        metric_face_count.metric(label="Faces in View", value=len(faces))
+                        metric_face_count.metric(label="Faces detected", value=len(faces))
+                        metric_known_count.metric(label="Recognized faces", value=0)
 
                         annotated_frame = frame.copy()
 
@@ -906,7 +939,29 @@ if st.session_state["camera_active"]:
                         annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
                         frame_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
                         video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
-                        metric_face_count.metric(label="Faces in View", value=len(faces))
+                        metric_face_count.metric(label="Faces detected", value=len(faces))
+                        metric_known_count.metric(label="Recognized faces", value=0)
+
+                        if len(faces) == 0:
+                            result_card_placeholder.markdown(
+                                """
+                                <div class="clean-card">
+                                    <div style="font-weight: 600; margin-bottom: 4px;">Recognition Results</div>
+                                    <div style="font-size: 0.95rem; color: #6c757d;">No face detected. Please look at the camera.</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            result_card_placeholder.markdown(
+                                f"""
+                                <div class="clean-card">
+                                    <div style="font-weight: 600; margin-bottom: 4px;">Face Detection</div>
+                                    <div style="font-size: 0.95rem; color: #0f5132;">Faces detected: <b>{len(faces)}</b> (Recognition disabled in Detection Only mode).</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
 
                         time.sleep(0.02)
 

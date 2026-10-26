@@ -14,6 +14,7 @@ This module contains helper functions for:
 
 import os
 import re
+import sys
 import pickle
 import urllib.request
 import cv2
@@ -111,6 +112,15 @@ def get_camera(camera_index: int = 0):
             return cap
         if cap is not None:
             cap.release()
+
+        # On macOS, try the AVFOUNDATION backend if default fails
+        if sys.platform == "darwin":
+            cap_mac = cv2.VideoCapture(camera_index, cv2.CAP_AVFOUNDATION)
+            if cap_mac is not None and cap_mac.isOpened():
+                return cap_mac
+            if cap_mac is not None:
+                cap_mac.release()
+
         return None
     except Exception:
         return None
