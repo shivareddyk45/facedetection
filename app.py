@@ -245,10 +245,10 @@ with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
     min_neighbors = st.slider("Min Neighbors", min_value=3, max_value=10, value=5, step=1)
     recognition_threshold = st.slider(
         "Recognition Confidence Threshold",
-        min_value=0.25,
+        min_value=0.30,
         max_value=0.85,
         value=float(DEFAULT_RECOGNITION_THRESHOLD),
-        step=0.02
+        step=0.01
     )
     ambiguity_margin = st.slider(
         "Ambiguity Rejection Margin",
@@ -390,6 +390,7 @@ with col_info:
 
     # 3. Current recognized person's name and confidence
     result_card_placeholder = st.empty()
+    debug_card_placeholder = st.empty()
     if not st.session_state["camera_active"]:
         result_card_placeholder.markdown(
             """
@@ -400,6 +401,7 @@ with col_info:
             """,
             unsafe_allow_html=True
         )
+        debug_card_placeholder.empty()
 
     # 4. Registered Persons list
     st.markdown("#### Registered Persons")
@@ -463,6 +465,7 @@ def render_browser_camera_flow(
     metric_known_count,
     result_card_placeholder,
     status_card_placeholder,
+    debug_card_placeholder=None,
     target_name=None,
     target_samples=20
 ):
@@ -505,6 +508,8 @@ def render_browser_camera_flow(
                     """,
                     unsafe_allow_html=True
                 )
+                if debug_card_placeholder is not None:
+                    debug_card_placeholder.empty()
             else:
                 faces_html = "".join([
                     f"<div style='font-size: 1.05rem; font-weight: 500; color: #0f5132; padding: 3px 0;'>Face {i + 1}</div>"
@@ -519,6 +524,15 @@ def render_browser_camera_flow(
                     """,
                     unsafe_allow_html=True
                 )
+                if debug_card_placeholder is not None:
+                    debug_card_placeholder.markdown(
+                        f"""
+                        <div class="clean-card" style="margin-top: 10px; font-size: 0.85rem; color: #495057;">
+                            <b>Detection Diagnostics:</b> {len(faces)} face(s) detected. Face recognition is disabled in Detection Only mode.
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
         elif mode == "Recognition":
             try:
@@ -545,6 +559,7 @@ def render_browser_camera_flow(
             recognitions = []
             known_count = 0
             recognized_cards = []
+            debug_items = []
 
             for idx, (x, y, w, h) in enumerate(faces):
                 face_num = idx + 1
@@ -560,12 +575,15 @@ def render_browser_camera_flow(
                     name = res[0]
                     score = res[1]
                     is_known = res[2] if len(res) > 2 else False
+                    dbg = res[4] if len(res) > 4 else {}
                 elif isinstance(res, dict):
                     name = res.get("name", "Unknown Person")
                     score = res.get("score", res.get("confidence", 0.0))
                     is_known = res.get("is_known", False)
+                    dbg = res.get("debug_info", {})
                 else:
                     name, score, is_known = "Unknown Person", 0.0, False
+                    dbg = {}
 
                 confidence = score * 100.0 if score <= 1.0 else score
                 if is_known and name and name != "Unknown Person":
@@ -579,6 +597,16 @@ def render_browser_camera_flow(
                     recognized_cards.append((face_num, "Unknown Person", confidence, False))
 
                 recognitions.append((x, y, w, h, name, confidence, is_known, label, face_num))
+
+                debug_items.append({
+                    "face_num": face_num,
+                    "best_name": dbg.get("best_name", "None"),
+                    "score": confidence,
+                    "threshold": recognition_threshold * 100.0,
+                    "decision": name,
+                    "is_known": is_known,
+                    "reason": dbg.get("reason", "")
+                })
 
             metric_known_count.metric(label="Recognized faces", value=known_count)
             annotated = draw_recognition_results(frame, recognitions)
@@ -595,10 +623,12 @@ def render_browser_camera_flow(
                     """,
                     unsafe_allow_html=True
                 )
+                if debug_card_placeholder is not None:
+                    debug_card_placeholder.empty()
             else:
                 matches_html = "".join([
                     f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
-                    f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n}</div>"
+                    f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n} <span style='font-size: 0.85rem; font-weight: normal; color: #198754;'>(Registered)</span></div>"
                     f"<div style='font-size: 0.85rem; color: #198754;'>Confidence: {c:.1f}%</div>"
                     f"</div>"
                     if k else
@@ -616,6 +646,28 @@ def render_browser_camera_flow(
                     """,
                     unsafe_allow_html=True
                 )
+
+                if debug_card_placeholder is not None:
+                    debug_rows_html = "".join([
+                        f"<div style='font-size: 0.85rem; padding: 6px 8px; margin-bottom: 6px; background: #ffffff; border-radius: 4px; border-left: 3px solid {'#198754' if d['is_known'] else '#dc3545'};'>"
+                        f"<div><b>Face {d['face_num']}</b> &rarr; <b>{d['decision']}</b></div>"
+                        f"<div style='color: #495057;'>Closest Profile: <b>{d['best_name']}</b></div>"
+                        f"<div style='color: #495057;'>Matching Score: <b>{d['score']:.1f}%</b> | Threshold: <b>{d['threshold']:.0f}%</b></div>"
+                        f"<div style='color: {'#0f5132' if d['is_known'] else '#842029'}; font-size: 0.8rem; margin-top: 2px;'>{d['reason']}</div>"
+                        f"</div>"
+                        for d in debug_items
+                    ])
+                    debug_card_placeholder.markdown(
+                        f"""
+                        <div class="clean-card" style="margin-top: 10px;">
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">
+                                Recognition Diagnostics ({len(faces)} face(s))
+                            </div>
+                            {debug_rows_html}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
         elif mode == "Registration":
             reg_name = target_name
@@ -672,6 +724,7 @@ if st.session_state["camera_active"]:
             metric_known_count=metric_known_count,
             result_card_placeholder=result_card_placeholder,
             status_card_placeholder=status_card_placeholder,
+            debug_card_placeholder=debug_card_placeholder,
             target_name=st.session_state.get("target_name"),
             target_samples=st.session_state.get("target_samples", 20)
         )
@@ -697,6 +750,7 @@ if st.session_state["camera_active"]:
                 metric_known_count=metric_known_count,
                 result_card_placeholder=result_card_placeholder,
                 status_card_placeholder=status_card_placeholder,
+                debug_card_placeholder=debug_card_placeholder,
                 target_name=st.session_state.get("target_name"),
                 target_samples=st.session_state.get("target_samples", 20)
             )
@@ -745,6 +799,7 @@ if st.session_state["camera_active"]:
                         recognitions = []
                         known_count = 0
                         recognized_cards = []
+                        debug_items = []
 
                         for idx, (x, y, w, h) in enumerate(faces):
                             face_num = idx + 1
@@ -761,12 +816,15 @@ if st.session_state["camera_active"]:
                                 name = res[0]
                                 score = res[1]
                                 is_known = res[2] if len(res) > 2 else False
+                                dbg = res[4] if len(res) > 4 else {}
                             elif isinstance(res, dict):
                                 name = res.get("name", "Unknown Person")
                                 score = res.get("score", res.get("confidence", 0.0))
                                 is_known = res.get("is_known", False)
+                                dbg = res.get("debug_info", {})
                             else:
                                 name, score, is_known = "Unknown Person", 0.0, False
+                                dbg = {}
 
                             confidence = score * 100.0 if score <= 1.0 else score
 
@@ -783,6 +841,17 @@ if st.session_state["camera_active"]:
 
                             recognitions.append((x, y, w, h, name, confidence, is_known, label, face_num))
 
+                            # Debug diagnostics item for this face
+                            debug_items.append({
+                                "face_num": face_num,
+                                "best_name": dbg.get("best_name", "None"),
+                                "score": confidence,
+                                "threshold": recognition_threshold * 100.0,
+                                "decision": name,
+                                "is_known": is_known,
+                                "reason": dbg.get("reason", "")
+                            })
+
                         metric_known_count.metric(label="Recognized faces", value=known_count)
 
                         # Update Recognition Result card beside the camera
@@ -796,10 +865,11 @@ if st.session_state["camera_active"]:
                                 """,
                                 unsafe_allow_html=True
                             )
+                            debug_card_placeholder.empty()
                         else:
                             matches_html = "".join([
                                 f"<div style='margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;'>"
-                                f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n}</div>"
+                                f"<div style='font-size: 1.05rem; font-weight: bold; color: #0f5132;'>Face {fnum} — {n} <span style='font-size: 0.85rem; font-weight: normal; color: #198754;'>(Registered)</span></div>"
                                 f"<div style='font-size: 0.85rem; color: #198754;'>Confidence: {c:.1f}%</div>"
                                 f"</div>"
                                 if k else
@@ -813,6 +883,28 @@ if st.session_state["camera_active"]:
                                 <div class="clean-card">
                                     <div style="font-weight: 600; font-size: 0.95rem; color: #212529; margin-bottom: 8px;">Recognition Results ({len(faces)} face(s)):</div>
                                     {matches_html}
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+
+                            # Live Recognition Diagnostics (Debugging Information)
+                            debug_rows_html = "".join([
+                                f"<div style='font-size: 0.85rem; padding: 6px 8px; margin-bottom: 6px; background: #ffffff; border-radius: 4px; border-left: 3px solid {'#198754' if d['is_known'] else '#dc3545'};'>"
+                                f"<div><b>Face {d['face_num']}</b> &rarr; <b>{d['decision']}</b></div>"
+                                f"<div style='color: #495057;'>Closest Profile: <b>{d['best_name']}</b></div>"
+                                f"<div style='color: #495057;'>Matching Score: <b>{d['score']:.1f}%</b> | Threshold: <b>{d['threshold']:.0f}%</b></div>"
+                                f"<div style='color: {'#0f5132' if d['is_known'] else '#842029'}; font-size: 0.8rem; margin-top: 2px;'>{d['reason']}</div>"
+                                f"</div>"
+                                for d in debug_items
+                            ])
+                            debug_card_placeholder.markdown(
+                                f"""
+                                <div class="clean-card" style="margin-top: 10px;">
+                                    <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">
+                                        Recognition Diagnostics ({len(faces)} face(s))
+                                    </div>
+                                    {debug_rows_html}
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -954,6 +1046,7 @@ if st.session_state["camera_active"]:
                                 """,
                                 unsafe_allow_html=True
                             )
+                            debug_card_placeholder.empty()
                         else:
                             faces_html = "".join([
                                 f"<div style='font-size: 1.05rem; font-weight: 500; color: #0f5132; padding: 3px 0;'>Face {i + 1}</div>"
@@ -964,6 +1057,14 @@ if st.session_state["camera_active"]:
                                 <div class="clean-card">
                                     <div style="font-weight: 600; margin-bottom: 6px;">Faces Detected: {len(faces)}</div>
                                     {faces_html}
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                            debug_card_placeholder.markdown(
+                                f"""
+                                <div class="clean-card" style="margin-top: 10px; font-size: 0.85rem; color: #495057;">
+                                    <b>Detection Diagnostics:</b> {len(faces)} face(s) detected. Face recognition is disabled in Detection Only mode.
                                 </div>
                                 """,
                                 unsafe_allow_html=True

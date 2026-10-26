@@ -24,7 +24,7 @@ import numpy as np
 SFACE_MODEL_PATH = "models/face_recognition_sface_2021dec.onnx"
 SFACE_MODEL_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
 EMBEDDINGS_CACHE_PATH = "models/embeddings.pkl"
-DEFAULT_RECOGNITION_THRESHOLD = 0.50  # Calibrated for unaligned Haar crops + SFace
+DEFAULT_RECOGNITION_THRESHOLD = 0.64  # Calibrated for unaligned Haar crops + SFace cosine matching
 DEFAULT_AMBIGUITY_MARGIN = 0.08       # Minimum separation required between top 2 candidates
 
 
