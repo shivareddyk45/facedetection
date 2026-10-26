@@ -53,110 +53,99 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# 2. Clean, Professional Styling (Arial, Adaptive Theme, Blue Buttons)
+# 2. Simple, Clean, Professional Styling (Light theme, Blue buttons, Arial)
 # -------------------------------------------------------------
 st.markdown(
     """
     <style>
-    /* CSS Variables for Dynamic Light & Dark Background Adaptability */
-    :root {
-        --text-color: #212529;
-        --background-color: #f8f9fa;
-        --secondary-background-color: #ffffff;
-        --border-color: #dee2e6;
-        --primary-blue: #0d6efd;
-        --primary-hover: #0b5ed7;
-        --danger-red: #dc3545;
-        --danger-hover: #bb2d3b;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --text-color: #f8f9fa;
-            --background-color: #0e1117;
-            --secondary-background-color: #1e232b;
-            --border-color: #30363d;
-            --primary-blue: #0d6efd;
-            --primary-hover: #0b5ed7;
-            --danger-red: #dc3545;
-            --danger-hover: #bb2d3b;
-        }
-    }
-
-    /* Base Typography: Arial font, text color matches the background theme */
-    html, body, [class*="css"], .stApp {
+    /* 1. Global Reset & Typography */
+    html, body, .stApp {
         font-family: Arial, Helvetica, sans-serif !important;
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
     }
 
-    /* Ensure text color adapts dynamically to light or dark background */
-    .stApp, .stApp p, .stApp span, .stApp div, .stApp label, .stApp li, .stApp a {
-        color: var(--text-color) !important;
-    }
-
-    /* Headings */
-    h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+    /* Target standard text elements - DO NOT TOUCH ICONS OR SVGs TO PREVENT LIGATURE OVERLAP */
+    p, h1, h2, h3, h4, h5, h6, label, .stMarkdown {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: var(--text-color) !important;
-        font-weight: 600 !important;
+        color: #212529 !important;
     }
 
+    /* Header Typography */
     .main-title {
         font-family: Arial, Helvetica, sans-serif !important;
-        font-size: 2.2rem !important;
+        font-size: 2rem !important;
         font-weight: 700 !important;
-        color: var(--text-color) !important;
+        color: #212529 !important;
         margin-bottom: 2px !important;
-        letter-spacing: -0.5px;
+        margin-top: 0px !important;
     }
 
     .main-subtitle {
         font-family: Arial, Helvetica, sans-serif !important;
-        font-size: 1.1rem !important;
-        color: var(--text-color) !important;
-        opacity: 0.85;
+        font-size: 1rem !important;
+        color: #555555 !important;
         margin-top: 0px !important;
-        margin-bottom: 24px !important;
+        margin-bottom: 20px !important;
         font-weight: normal !important;
+    }
+
+    /* Section Headings */
+    h3 {
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        color: #212529 !important;
+        margin-top: 14px !important;
+        margin-bottom: 8px !important;
+    }
+
+    h4 {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: #212529 !important;
+        margin-top: 10px !important;
+        margin-bottom: 6px !important;
     }
 
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        border-right: 1px solid var(--border-color, #dee2e6) !important;
+        background-color: #ffffff !important;
+        border-right: 1px solid #dee2e6 !important;
     }
 
-    section[data-testid="stSidebar"] * {
-        font-family: Arial, Helvetica, sans-serif !important;
-        color: var(--text-color) !important;
+    section[data-testid="stSidebar"] h3 {
+        font-size: 1.05rem !important;
+        font-weight: 600 !important;
+        margin-top: 12px !important;
+        margin-bottom: 8px !important;
     }
 
-    /* Button Styling: Fix all overlapping, truncation, and sizing issues */
+    /* Simple, Consistent Blue Buttons */
     div.stButton > button {
-        background-color: var(--primary-blue) !important;
+        background-color: #0d6efd !important;
         color: #ffffff !important;
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 14px !important;
-        font-weight: 600 !important;
-        border: 1px solid var(--primary-blue) !important;
-        border-radius: 6px !important;
-        padding: 10px 16px !important;
-        min-height: 44px !important;
-        height: auto !important;
+        font-weight: 500 !important;
+        border: 1px solid #0d6efd !important;
+        border-radius: 4px !important;
+        padding: 6px 14px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
         width: 100% !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        line-height: 1.3 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         text-align: center !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
-        transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out !important;
+        transition: background-color 0.15s ease-in-out !important;
     }
 
     div.stButton > button:hover {
-        background-color: var(--primary-hover) !important;
-        border-color: var(--primary-hover) !important;
+        background-color: #0b5ed7 !important;
+        border-color: #0a58ca !important;
         color: #ffffff !important;
     }
 
@@ -165,97 +154,53 @@ st.markdown(
         border-color: #0a53be !important;
     }
 
-    /* Stop Camera / Secondary / Danger Button */
-    div.stButton > button[kind="secondary"] {
-        background-color: var(--danger-red) !important;
-        border-color: var(--danger-red) !important;
-        color: #ffffff !important;
+    /* Text Input Height Alignment with Buttons */
+    .stTextInput div[data-baseweb="input"] {
+        height: 38px !important;
+        min-height: 38px !important;
+        border-radius: 4px !important;
+        border: 1px solid #ced4da !important;
+        background-color: #ffffff !important;
     }
 
-    div.stButton > button[kind="secondary"]:hover {
-        background-color: var(--danger-hover) !important;
-        border-color: var(--danger-hover) !important;
-        color: #ffffff !important;
-    }
-
-    /* Inputs */
-    .stTextInput input, input[type="text"], input[type="number"] {
+    .stTextInput input {
         font-family: Arial, Helvetica, sans-serif !important;
-        border-radius: 6px !important;
-        border: 1px solid var(--border-color, #ced4da) !important;
-        color: var(--text-color) !important;
-        background-color: var(--secondary-background-color, #ffffff) !important;
-        padding: 10px 14px !important;
-        min-height: 44px !important;
+        font-size: 14px !important;
+        color: #212529 !important;
+        padding: 6px 12px !important;
+        height: 36px !important;
     }
 
-    /* Metrics */
+    /* Metric Boxes */
     div[data-testid="stMetric"] {
-        background-color: var(--secondary-background-color, #ffffff) !important;
-        border: 1px solid var(--border-color, #dee2e6) !important;
-        border-radius: 6px !important;
-        padding: 12px 16px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 4px !important;
+        padding: 10px 14px !important;
         box-shadow: none !important;
     }
 
-    div[data-testid="stMetricValue"], div[data-testid="stMetricValue"] * {
+    div[data-testid="stMetricValue"] {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: var(--text-color) !important;
+        color: #0d6efd !important;
         font-weight: 700 !important;
-        font-size: 1.5rem !important;
+        font-size: 1.4rem !important;
     }
 
-    div[data-testid="stMetricLabel"], div[data-testid="stMetricLabel"] * {
+    div[data-testid="stMetricLabel"] {
         font-family: Arial, Helvetica, sans-serif !important;
-        color: var(--text-color) !important;
-        opacity: 0.8;
+        color: #6c757d !important;
         font-size: 0.85rem !important;
     }
 
-    /* Cards */
-    .card-idle {
-        background-color: var(--secondary-background-color, #f8f9fa);
-        border: 1px solid var(--border-color, #dee2e6);
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 16px;
-        color: var(--text-color);
-    }
-
-    .card-recognized {
-        background-color: rgba(25, 135, 84, 0.12);
-        border: 1px solid #198754;
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 16px;
-        color: var(--text-color);
-    }
-
-    .card-unknown {
-        background-color: rgba(220, 53, 69, 0.12);
-        border: 1px solid #dc3545;
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 16px;
-        color: var(--text-color);
-    }
-
-    .card-registered {
-        background-color: var(--secondary-background-color, #ffffff);
-        border: 1px solid var(--border-color, #dee2e6);
-        border-radius: 6px;
-        padding: 14px 18px;
-        margin-bottom: 16px;
-        color: var(--text-color);
-    }
-
-    .camera-placeholder {
-        border: 2px dashed var(--border-color, #dee2e6);
-        border-radius: 8px;
-        padding: 60px 24px;
-        text-align: center;
-        background-color: var(--secondary-background-color, #f8f9fa);
-        margin-bottom: 16px;
+    /* Clean Card Containers */
+    .clean-card {
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        color: #212529;
     }
     </style>
     """,
@@ -269,31 +214,32 @@ st.markdown("<h1 class='main-title'>Face Detection and Recognition</h1>", unsafe
 st.markdown("<p class='main-subtitle'>Mini project</p>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 4. Sidebar Controls (Organized into separate clean sections)
+# 4. Sidebar Controls (Organized into three clean sections)
 # -------------------------------------------------------------
-st.sidebar.markdown("## Camera Settings")
+# Section 1: Camera Settings
+st.sidebar.markdown("### Camera Settings")
 default_cam_index = 1 if IS_CLOUD_ENV else 0
 camera_source = st.sidebar.radio(
     "Camera Input Method",
-    options=["Live Webcam Stream (OpenCV)", "Browser Camera / Snapshot (Cloud & Mobile)"],
-    index=default_cam_index,
-    help="Use 'Live Webcam Stream' on your laptop. Use 'Browser Camera' on Streamlit Cloud."
+    options=["Live Webcam Stream (OpenCV)", "Browser Camera / Snapshot"],
+    index=default_cam_index
 )
 
-if camera_source == "Live Webcam Stream (OpenCV)":
+if camera_source.startswith("Live Webcam"):
     camera_index = st.sidebar.number_input(
         "Camera Index",
         min_value=0,
         max_value=5,
         value=0,
-        step=1,
-        help="Default is 0 (built-in webcam). Select 1 or 2 for external USB camera."
+        step=1
     )
 else:
     camera_index = 0
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("## Model Tuning & Thresholds")
+
+# Section 2: Model Settings
+st.sidebar.markdown("### Model Settings")
 with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
     scale_factor = st.slider("Detection Scale Factor", min_value=1.05, max_value=1.5, value=1.1, step=0.05)
     min_neighbors = st.slider("Min Neighbors", min_value=3, max_value=10, value=5, step=1)
@@ -302,20 +248,20 @@ with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
         min_value=0.25,
         max_value=0.85,
         value=float(DEFAULT_RECOGNITION_THRESHOLD),
-        step=0.02,
-        help="Calibrated threshold (0.50). Similarity >= threshold is recognized."
+        step=0.02
     )
     ambiguity_margin = st.slider(
         "Ambiguity Rejection Margin",
         min_value=0.02,
         max_value=0.20,
         value=float(DEFAULT_AMBIGUITY_MARGIN),
-        step=0.01,
-        help="Separation between top two candidate identities to avoid false guessing."
+        step=0.01
     )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("## Dataset Maintenance")
+
+# Section 3: Dataset Management
+st.sidebar.markdown("### Dataset Management")
 if st.sidebar.button("Sync Dataset", key="btn_sync_embeddings", use_container_width=True):
     with st.spinner("Generating embeddings..."):
         try:
@@ -343,26 +289,27 @@ if "camera_active" not in st.session_state:
 if "mode" not in st.session_state:
     st.session_state["mode"] = "Idle"
 if "status_message" not in st.session_state:
-    st.session_state["status_message"] = "Camera is currently stopped. Choose an action above to start."
+    st.session_state["status_message"] = "Camera is currently stopped"
 if "last_registered" not in st.session_state:
     st.session_state["last_registered"] = None
 
 # -------------------------------------------------------------
-# 6. Controls Section (Clearly separated with sufficient width)
+# 6. Action Controls: Camera & Recognition Controls
 # -------------------------------------------------------------
-# Section A: Camera & Recognition Controls
 st.markdown("### Camera & Recognition Controls")
-col_c1, col_c2, col_c3 = st.columns([1, 1, 1], gap="medium")
+col_c1, col_c2, col_c3 = st.columns([1, 1, 1], gap="small")
 with col_c1:
     btn_recognize = st.button("Start Recognition", key="btn_start_recognition", use_container_width=True)
 with col_c2:
     btn_detect = st.button("Face Detection Only", key="btn_detection_only", use_container_width=True)
 with col_c3:
-    btn_stop = st.button("Stop Camera", key="btn_stop_camera", use_container_width=True, type="secondary")
+    btn_stop = st.button("Stop Camera", key="btn_stop_camera", use_container_width=True)
 
-# Section B: Registration Controls
+# -------------------------------------------------------------
+# 7. Action Controls: Registration Controls
+# -------------------------------------------------------------
 st.markdown("### Registration Controls")
-col_reg_in, col_reg_btn = st.columns([3, 1], gap="medium")
+col_reg_in, col_reg_btn = st.columns([3.5, 1], gap="small")
 with col_reg_in:
     user_name_input = st.text_input(
         "Person Name",
@@ -373,25 +320,25 @@ with col_reg_in:
 with col_reg_btn:
     btn_register = st.button("Register Face", key="btn_register_face", use_container_width=True)
 
-st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
 # Handle Button Click Actions
 if btn_detect:
     st.session_state["camera_active"] = True
     st.session_state["mode"] = "Face Detection"
-    st.session_state["status_message"] = "Camera active: Face detection running."
+    st.session_state["status_message"] = "Face detection running"
     st.rerun()
 
 elif btn_register:
     clean_name = sanitize_name(user_name_input)
     if not clean_name:
-        st.warning("Please enter a person's name in the input box before clicking Register Face.")
+        st.warning("Please enter a person's name before clicking Register Face.")
     else:
         st.session_state["camera_active"] = True
         st.session_state["mode"] = "Registration"
         st.session_state["target_name"] = clean_name
         st.session_state["target_samples"] = 20
-        st.session_state["status_message"] = f"Starting face registration for: {clean_name}"
+        st.session_state["status_message"] = f"Registering face: {clean_name}"
         st.rerun()
 
 elif btn_recognize:
@@ -401,51 +348,39 @@ elif btn_recognize:
     else:
         st.session_state["camera_active"] = True
         st.session_state["mode"] = "Recognition"
-        st.session_state["status_message"] = "Camera active: Real-time face recognition running."
+        st.session_state["status_message"] = "Real-time recognition running"
         st.rerun()
 
 elif btn_stop:
     st.session_state["camera_active"] = False
     st.session_state["mode"] = "Stopped"
-    st.session_state["status_message"] = "Camera is currently stopped. Choose an action above to start."
+    st.session_state["status_message"] = "Camera is currently stopped"
     st.rerun()
 
 # -------------------------------------------------------------
-# 7. Main Section: Camera Feed (Left) & Recognition Info (Right)
+# 8. Main Section: Camera Feed (Left) & Recognition Results (Right)
 # -------------------------------------------------------------
 col_cam, col_info = st.columns([3, 2], gap="large")
 
-# Right Column: Recognition Result, Status, Metrics, Registered Persons
+# Right Column: Recognition Results
 with col_info:
+    st.markdown("### Recognition Results")
+
     # 1. Recognition Status
-    st.markdown("### Recognition Status")
     status_card_placeholder = st.empty()
     status_card_placeholder.markdown(
         f"""
-        <div class="card-idle">
-            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Mode: {st.session_state['mode']}</div>
-            <div style="font-size: 0.9rem; opacity: 0.85;">{st.session_state['status_message']}</div>
+        <div class="clean-card">
+            <div style="font-weight: 600; margin-bottom: 2px;">Recognition Status</div>
+            <div style="font-size: 0.95rem; color: #495057;">Mode: <b>{st.session_state['mode']}</b></div>
+            <div style="font-size: 0.85rem; color: #6c757d; margin-top: 2px;">{st.session_state['status_message']}</div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # 2. Recognition Result
-    st.markdown("### Recognition Result")
-    result_card_placeholder = st.empty()
-    if not st.session_state["camera_active"]:
-        result_card_placeholder.markdown(
-            """
-            <div class="card-idle">
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status: Inactive</div>
-                <div style="font-size: 0.9rem; opacity: 0.85;">Click <b>Start Recognition</b> above to identify faces in real time.</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # 3. Detection Metrics: Faces in View & Recognized Faces
-    col_m1, col_m2 = st.columns(2, gap="medium")
+    # 2. Metrics: Faces in View & Recognized Faces
+    col_m1, col_m2 = st.columns(2, gap="small")
     with col_m1:
         metric_face_count = st.empty()
         metric_face_count.metric(label="Faces in View", value=0)
@@ -453,21 +388,32 @@ with col_info:
         metric_known_count = st.empty()
         metric_known_count.metric(label="Recognized Faces", value=0)
 
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    # 3. Current recognized person's name and confidence
+    result_card_placeholder = st.empty()
+    if not st.session_state["camera_active"]:
+        result_card_placeholder.markdown(
+            """
+            <div class="clean-card">
+                <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
+                <div style="font-size: 0.95rem; color: #6c757d;">Camera is currently stopped.</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # 4. Registered Persons list
-    st.markdown("### Registered Persons")
+    st.markdown("#### Registered Persons")
     reg_people_box = st.empty()
     current_registered = get_registered_users()
     if current_registered:
         profiles_list = "".join([
-            f"<div style='padding: 8px 0; border-bottom: 1px solid var(--border-color, rgba(128,128,128,0.2)); font-size: 0.95rem;'>"
-            f"<b>{name}</b> &nbsp;—&nbsp; <span style='opacity: 0.85;'>{count} saved sample(s)</span></div>"
+            f"<div style='padding: 6px 0; border-bottom: 1px solid #dee2e6; font-size: 0.95rem;'>"
+            f"<b>{name}</b> — <span style='color: #6c757d;'>{count} sample(s)</span></div>"
             for name, count in current_registered.items()
         ])
         reg_people_box.markdown(
             f"""
-            <div class="card-registered">
+            <div class="clean-card">
                 {profiles_list}
             </div>
             """,
@@ -476,8 +422,8 @@ with col_info:
     else:
         reg_people_box.markdown(
             """
-            <div class="card-registered" style="opacity: 0.85;">
-                No persons registered yet. Enter a name above and click <b>Register Face</b>.
+            <div class="clean-card" style="color: #6c757d; font-size: 0.9rem;">
+                No registered persons yet. Enter a name and click <b>Register Face</b>.
             </div>
             """,
             unsafe_allow_html=True
@@ -491,23 +437,14 @@ with col_cam:
     # Success message banner when a person is registered
     if st.session_state.get("last_registered"):
         reg_info = st.session_state["last_registered"]
-        st.success(
-            f"Registration successful for **{reg_info['name']}** ({reg_info['count']} face samples saved)."
-        )
-        if reg_info.get("previews"):
-            st.write("Saved Face Samples Preview:")
-            preview_cols = st.columns(min(4, len(reg_info["previews"])), gap="small")
-            for idx, p_col in enumerate(preview_cols):
-                with p_col:
-                    st.image(reg_info["previews"][idx], caption=f"Sample {idx + 1}", use_container_width=True)
+        st.success(f"Registered **{reg_info['name']}** ({reg_info['count']} face samples saved).")
 
-    # Standby state when camera is inactive (No massive blank area)
+    # Standby state when camera is inactive (Small, simple message with no extra blank space)
     if not st.session_state["camera_active"]:
         video_placeholder.markdown(
             """
-            <div class="camera-placeholder">
-                <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Camera is currently stopped</p>
-                <p style="font-size: 0.95rem; opacity: 0.85; margin: 0; color: var(--text-color);">Click <b>Start Recognition</b> or <b>Face Detection Only</b> above to activate the camera.</p>
+            <div class="clean-card" style="text-align: center; padding: 28px 16px;">
+                <p style="font-size: 1rem; color: #495057; margin: 0; font-weight: 500;">Camera is currently stopped</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -532,7 +469,7 @@ def render_browser_camera_flow(
     st.markdown(f"#### {mode} (Browser Camera Mode)")
     st.caption("Capture a photo using your device camera or upload an image file:")
 
-    col_cam_in, col_file_in = st.columns(2, gap="medium")
+    col_cam_in, col_file_in = st.columns(2, gap="small")
     with col_cam_in:
         cam_shot = st.camera_input("Take photo with webcam:", key=f"browser_cam_{mode}")
     with col_file_in:
@@ -616,24 +553,23 @@ def render_browser_camera_flow(
             if len(faces) == 0:
                 result_card_placeholder.markdown(
                     """
-                    <div class="card-idle">
-                        <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status</div>
-                        <div style="opacity: 0.9;">No face detected in the captured photo.</div>
+                    <div class="clean-card">
+                        <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
+                        <div style="font-size: 0.95rem; color: #6c757d;">No face detected in the captured photo.</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             elif known_count > 0:
                 matches_html = "".join([
-                    f"<div style='font-size: 1.25rem; font-weight: bold; margin-bottom: 4px;'>{n} ({c:.1f}%)</div>"
+                    f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>{n} ({c:.1f}%)</div>"
                     for n, c, k in recognized_cards if k
                 ])
                 result_card_placeholder.markdown(
                     f"""
-                    <div class="card-recognized">
-                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #198754;">Recognized Person</div>
+                    <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 4px;">Recognized Person:</div>
                         {matches_html}
-                        <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Identity verified with deep face embeddings</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -641,10 +577,9 @@ def render_browser_camera_flow(
             else:
                 result_card_placeholder.markdown(
                     """
-                    <div class="card-unknown">
-                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #dc3545;">Unknown Person</div>
-                        <div style="font-size: 1.25rem; font-weight: bold; margin-bottom: 4px;">Unknown Person</div>
-                        <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Face does not match any registered person</div>
+                    <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person:</div>
+                        <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -682,7 +617,7 @@ def render_browser_camera_flow(
 
 
 # -------------------------------------------------------------
-# 8. Active Camera Processing (Webcam / Browser Camera)
+# 9. Active Camera Processing (Webcam / Browser Camera)
 # -------------------------------------------------------------
 if st.session_state["camera_active"]:
     try:
@@ -693,7 +628,7 @@ if st.session_state["camera_active"]:
         st.stop()
 
     # Cloud or Browser Camera Fallback
-    if camera_source == "Browser Camera / Snapshot (Cloud & Mobile)":
+    if camera_source.startswith("Browser Camera"):
         render_browser_camera_flow(
             mode=st.session_state["mode"],
             face_cascade=face_cascade,
@@ -819,24 +754,23 @@ if st.session_state["camera_active"]:
                         if len(faces) == 0:
                             result_card_placeholder.markdown(
                                 """
-                                <div class="card-idle">
-                                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">Status</div>
-                                    <div style="opacity: 0.9;">No face detected in camera view.</div>
+                                <div class="clean-card">
+                                    <div style="font-weight: 600; margin-bottom: 4px;">Recognized Person</div>
+                                    <div style="font-size: 0.95rem; color: #6c757d;">No face detected in camera view.</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
                             )
                         elif known_count > 0:
                             matches_html = "".join([
-                                f"<div style='font-size: 1.3rem; font-weight: bold; margin-bottom: 4px;'>{n} ({c:.1f}%)</div>"
+                                f"<div style='font-size: 1.15rem; font-weight: bold; color: #0f5132;'>{n} ({c:.1f}%)</div>"
                                 for n, c, k in recognized_cards if k
                             ])
                             result_card_placeholder.markdown(
                                 f"""
-                                <div class="card-recognized">
-                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #198754;">Recognized Person</div>
+                                <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: #0f5132; margin-bottom: 4px;">Recognized Person:</div>
                                     {matches_html}
-                                    <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Identity verified with deep face embeddings</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -844,10 +778,9 @@ if st.session_state["camera_active"]:
                         else:
                             result_card_placeholder.markdown(
                                 """
-                                <div class="card-unknown">
-                                    <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 6px; color: #dc3545;">Unknown Person</div>
-                                    <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 4px;">Unknown Person</div>
-                                    <div style="font-size: 0.9rem; margin-top: 4px; opacity: 0.9;">Status: Face does not match any registered person</div>
+                                <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;">
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: #842029; margin-bottom: 4px;">Recognized Person:</div>
+                                    <div style="font-size: 1.15rem; font-weight: bold; color: #842029;">Unknown Person</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -981,7 +914,7 @@ if st.session_state["camera_active"]:
                     release_camera(cap)
 
 # -------------------------------------------------------------
-# 9. Clean Footer
+# 10. Clean Footer
 # -------------------------------------------------------------
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-st.markdown("<p style='color: var(--text-color); opacity: 0.8; font-size: 0.85rem;'>Face Detection and Recognition | Mini project</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #6c757d; font-size: 0.85rem; text-align: center;'>Face Detection and Recognition | Mini project</p>", unsafe_allow_html=True)
