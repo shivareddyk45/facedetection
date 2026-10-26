@@ -13,10 +13,21 @@ Complete End-to-End Pipeline:
 5. Stage 5: Full integration with live diagnostics, score displays, and robust error handling.
 """
 
+import os
+import sys
 import time
 import cv2
 import numpy as np
+from PIL import Image
 import streamlit as st
+
+# Auto-detect cloud / containerized environment (e.g. Streamlit Community Cloud)
+IS_CLOUD_ENV = (
+    os.path.exists("/mount/src") or
+    (sys.platform.startswith("linux") and not any(os.path.exists(f"/dev/video{i}") for i in range(4))) or
+    bool(os.environ.get("STREAMLIT_SHARING_HOST")) or
+    bool(os.environ.get("IS_STREAMLIT_CLOUD"))
+)
 
 from src.face_utils import (
     load_face_cascade,
@@ -62,11 +73,12 @@ st.markdown(
 # 3. Sidebar Controls
 st.sidebar.header("⚙️ System Controls")
 
-# Camera input method
+# Camera input method (defaults to Browser Camera on Cloud, Live Stream on local MacBook)
+default_cam_index = 1 if IS_CLOUD_ENV else 0
 camera_source = st.sidebar.radio(
     "Camera Input Method:",
     options=["Live Webcam Stream (OpenCV)", "Browser Camera / Snapshot (Cloud & Mobile)"],
-    index=0,
+    index=default_cam_index,
     help="Use 'Live Webcam Stream' for continuous video on your local laptop. Use 'Browser Camera' when running on Streamlit Cloud or mobile browsers."
 )
 
@@ -197,6 +209,171 @@ elif btn_stop:
     st.session_state["mode"] = "Stopped"
     st.session_state["status_message"] = "⏹️ Camera stopped. Ready for next action."
 
+
+# Helper: Render Browser Camera Flow (for Streamlit Cloud and Mobile Browsers)
+def render_browser_camera_flow(
+    mode,
+    face_cascade,
+    scale_factor,
+    min_neighbors,
+    recognition_threshold,
+    ambiguity_margin,
+    metric_face_count,
+    metric_known_count,
+    diag_box,
+    target_name=None,
+    target_samples=20
+):
+    st.markdown(f"#### 📷 {mode} (Browser Camera Mode)")
+    st.caption("Capture a photo using your device camera or upload an image file:")
+
+    col_cam_in, col_file_in = st.columns(2)
+    with col_cam_in:
+        cam_shot = st.camera_input("Take a photo with your webcam:", key=f"browser_cam_{mode}")
+    with col_file_in:
+        file_shot = st.file_uploader("Or upload an image (JPG/PNG):", type=["jpg", "jpeg", "png"], key=f"browser_file_{mode}")
+
+    active_shot = cam_shot if cam_shot is not None else file_shot
+
+    if active_shot is not None:
+        try:
+            pil_shot = Image.open(active_shot)
+            frame_rgb = np.array(pil_shot.convert("RGB"))
+            frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            st.error(f"❌ Error loading image: {e}")
+            return
+
+        if mode == "Face Detection":
+            faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+            metric_face_count.metric(label="Faces in View", value=len(faces))
+            annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
+            st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
+
+        elif mode == "Recognition":
+            try:
+                rec_net = load_face_recognizer(SFACE_MODEL_PATH)
+                cached_embs = load_cached_embeddings(EMBEDDINGS_CACHE_PATH)
+                current_people = get_registered_users()
+                if not cached_embs or set(cached_embs.keys()) != set(current_people.keys()):
+                    with st.spinner("Preparing face embeddings..."):
+                        cached_embs = generate_dataset_embeddings(recognizer_net=rec_net, model_path=SFACE_MODEL_PATH)
+                        save_embeddings(cached_embs, EMBEDDINGS_CACHE_PATH)
+
+                if not cached_embs:
+                    st.warning("⚠️ No registered face profiles found! Please register a person first in the sidebar.")
+                    return
+            except Exception as e:
+                st.error(f"❌ Model initialization error: {e}")
+                return
+
+            faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+            metric_face_count.metric(label="Faces in View", value=len(faces))
+
+            recognitions = []
+            known_count = 0
+            diagnostics_info = []
+
+            for idx, (x, y, w, h) in enumerate(faces):
+                face_crop = crop_face(frame, (x, y, w, h), target_size=(112, 112))
+                res = recognize_face(
+                    face_crop,
+                    rec_net,
+                    cached_embs,
+                    threshold=recognition_threshold,
+                    ambiguity_margin=ambiguity_margin
+                )
+                if isinstance(res, (tuple, list)):
+                    name = res[0]
+                    score = res[1]
+                    is_known = res[2] if len(res) > 2 else False
+                    candidate_scores = res[3] if len(res) > 3 else {}
+                    debug_info = res[4] if len(res) > 4 else {}
+                else:
+                    name, score, is_known, candidate_scores, debug_info = "Unknown Person", 0.0, False, {}, {}
+
+                confidence = score * 100.0 if score <= 1.0 else score
+                if is_known and name and name != "Unknown Person":
+                    known_count += 1
+                    label = f"{name} ({confidence:.1f}%)"
+                else:
+                    name = "Unknown Person"
+                    is_known = False
+                    label = "Unknown Person"
+
+                recognitions.append((x, y, w, h, name, confidence, is_known, label))
+
+                best_id = debug_info.get("best_name", name if is_known else "Unknown")
+                best_sc = debug_info.get("best_score", score)
+                best_sc_pct = best_sc * 100.0 if best_sc <= 1.0 else best_sc
+                second_id = debug_info.get("second_name")
+                second_sc = debug_info.get("second_score", 0.0)
+                second_sc_pct = second_sc * 100.0 if second_sc <= 1.0 else second_sc
+                margin_val = debug_info.get("margin", 0.0)
+                margin_pct = margin_val * 100.0 if margin_val <= 1.0 else margin_val
+                reason_text = debug_info.get("reason", "")
+                thresh_pct = recognition_threshold * 100.0
+
+                if second_id:
+                    second_display = f"**{second_id}** (`{second_sc_pct:.1f}%`) | Margin: `{margin_pct:.1f}%`"
+                else:
+                    second_display = "None (single registered profile)"
+
+                status_header = f"🟢 **Face {idx + 1}: Recognized as {label}**" if is_known else f"🔴 **Face {idx + 1}: Unknown Person**"
+                all_scores_str = ", ".join([f"{cand}: {s*100:.1f}%" for cand, s in candidate_scores.items()])
+
+                diag_card = (
+                    f"{status_header}\n\n"
+                    f"• **Best Match Identity:** **{best_id}** (Score: `{best_sc_pct:.1f}%`)\n\n"
+                    f"• **Second-Best Identity:** {second_display}\n\n"
+                    f"• **Threshold Used:** `{thresh_pct:.0f}%` (`{recognition_threshold:.2f}`)\n\n"
+                    f"• **Decision / Reason:** {reason_text}\n\n"
+                    f"• **All Candidates:** {all_scores_str if all_scores_str else 'None'}"
+                )
+                diagnostics_info.append(diag_card)
+
+            metric_known_count.metric(label="Recognized Faces", value=known_count)
+            annotated = draw_recognition_results(frame, recognitions)
+            st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption="Recognition Result", use_container_width=True)
+
+            loaded_profiles_str = ", ".join([f"{k} ({v.get('count', 0) if isinstance(v, dict) else 'ok'} samples)" for k, v in cached_embs.items()])
+            diag_text = (
+                f"**Registered Profiles:** {loaded_profiles_str}\n\n"
+                f"**Active Threshold:** `{recognition_threshold:.2f}`\n\n"
+                + "\n\n".join(diagnostics_info)
+            )
+            diag_box.markdown(diag_text)
+
+        elif mode == "Registration":
+            reg_name = target_name
+            if not reg_name:
+                st.error("⚠️ No target person name specified.")
+                return
+
+            faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
+            if len(faces) == 0:
+                st.warning("⚠️ No face detected in the photo! Please look directly at the camera.")
+            else:
+                largest_face = max(faces, key=lambda box: box[2] * box[3])
+                face_crop = crop_face(frame, largest_face, target_size=(160, 160))
+                existing_users = get_registered_users()
+                sample_idx = existing_users.get(reg_name, 0) + 1
+                saved_path = save_face_sample(face_crop, reg_name, sample_idx)
+
+                with st.spinner("Updating deep face embeddings..."):
+                    try:
+                        rec_net = load_face_recognizer(SFACE_MODEL_PATH)
+                        embs = generate_dataset_embeddings(recognizer_net=rec_net)
+                        save_embeddings(embs, EMBEDDINGS_CACHE_PATH)
+                    except Exception as e:
+                        st.error(f"Error updating embeddings: {e}")
+
+                st.success(f"🎉 Successfully captured and registered sample #{sample_idx} for **{reg_name}**!")
+                st.image(cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB), caption=f"Registered sample #{sample_idx} ({reg_name})", width=180)
+                st.info("💡 You can capture more photos from different angles to improve accuracy, or click **🔍 Recognize** in the sidebar to test.")
+    else:
+        st.info("👆 Look at your camera and click **Take photo** above (or upload an image) to proceed.")
+
 # 5. Main UI Layout: Video Stream & System Dashboard
 col_feed, col_status = st.columns([3, 2])
 
@@ -271,169 +448,59 @@ with col_feed:
 
     # Active Camera Stream / Processing
     else:
+        # Load Haar Cascade face detector
+        try:
+            face_cascade = load_face_cascade()
+        except RuntimeError as err:
+            st.error(f"❌ {err}")
+            st.session_state["camera_active"] = False
+            st.stop()
+
         # -------------------------------------------------------------
         # BRANCH A: BROWSER CAMERA / SNAPSHOT MODE (Cloud & Mobile)
         # -------------------------------------------------------------
         if camera_source == "Browser Camera / Snapshot (Cloud & Mobile)":
-            try:
-                face_cascade = load_face_cascade()
-            except RuntimeError as err:
-                st.error(f"❌ {err}")
-                st.session_state["camera_active"] = False
-                st.stop()
-
-            st.markdown(f"#### 📷 {st.session_state['mode']} (Browser Mode)")
-            st.caption("Capture a photo using your device webcam or upload an image file:")
-            cam_shot = st.camera_input("Take a photo:", key="browser_camera_snap")
-            file_shot = st.file_uploader("Or upload an image (JPG/PNG):", type=["jpg", "jpeg", "png"], key="browser_file_snap")
-            active_shot = cam_shot if cam_shot is not None else file_shot
-
-            if active_shot is not None:
-                from PIL import Image
-                pil_shot = Image.open(active_shot)
-                frame_rgb = np.array(pil_shot.convert("RGB"))
-                frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-
-                if st.session_state["mode"] == "Face Detection":
-                    faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-                    metric_face_count.metric(label="Faces in View", value=len(faces))
-                    annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
-                    st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
-
-                elif st.session_state["mode"] == "Recognition":
-                    try:
-                        rec_net = load_face_recognizer(SFACE_MODEL_PATH)
-                        cached_embs = load_cached_embeddings(EMBEDDINGS_CACHE_PATH)
-                        current_people = get_registered_users()
-                        if not cached_embs or set(cached_embs.keys()) != set(current_people.keys()):
-                            cached_embs = generate_dataset_embeddings(recognizer_net=rec_net, model_path=SFACE_MODEL_PATH)
-                            save_embeddings(cached_embs, EMBEDDINGS_CACHE_PATH)
-                    except Exception as e:
-                        st.error(f"❌ Model initialization error: {e}")
-                        st.stop()
-
-                    faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-                    metric_face_count.metric(label="Faces in View", value=len(faces))
-
-                    recognitions = []
-                    known_count = 0
-                    diagnostics_info = []
-
-                    for idx, (x, y, w, h) in enumerate(faces):
-                        face_crop = crop_face(frame, (x, y, w, h), target_size=(112, 112))
-                        res = recognize_face(
-                            face_crop,
-                            rec_net,
-                            cached_embs,
-                            threshold=recognition_threshold,
-                            ambiguity_margin=ambiguity_margin
-                        )
-                        if isinstance(res, (tuple, list)):
-                            name = res[0]
-                            score = res[1]
-                            is_known = res[2] if len(res) > 2 else False
-                            candidate_scores = res[3] if len(res) > 3 else {}
-                            debug_info = res[4] if len(res) > 4 else {}
-                        else:
-                            name, score, is_known, candidate_scores, debug_info = "Unknown Person", 0.0, False, {}, {}
-
-                        confidence = score * 100.0 if score <= 1.0 else score
-                        if is_known and name and name != "Unknown Person":
-                            known_count += 1
-                            label = f"{name} ({confidence:.1f}%)"
-                        else:
-                            name = "Unknown Person"
-                            is_known = False
-                            label = "Unknown Person"
-
-                        recognitions.append((x, y, w, h, name, confidence, is_known, label))
-
-                        best_id = debug_info.get("best_name", name if is_known else "Unknown")
-                        best_sc = debug_info.get("best_score", score)
-                        best_sc_pct = best_sc * 100.0 if best_sc <= 1.0 else best_sc
-                        second_id = debug_info.get("second_name")
-                        second_sc = debug_info.get("second_score", 0.0)
-                        second_sc_pct = second_sc * 100.0 if second_sc <= 1.0 else second_sc
-                        margin_val = debug_info.get("margin", 0.0)
-                        margin_pct = margin_val * 100.0 if margin_val <= 1.0 else margin_val
-                        reason_text = debug_info.get("reason", "")
-                        thresh_pct = recognition_threshold * 100.0
-
-                        if second_id:
-                            second_display = f"**{second_id}** (`{second_sc_pct:.1f}%`) | Margin: `{margin_pct:.1f}%`"
-                        else:
-                            second_display = "None (single registered profile)"
-
-                        status_header = f"🟢 **Face {idx + 1}: Recognized as {label}**" if is_known else f"🔴 **Face {idx + 1}: Unknown Person**"
-                        all_scores_str = ", ".join([f"{cand}: {s*100:.1f}%" for cand, s in candidate_scores.items()])
-
-                        diag_card = (
-                            f"{status_header}\n\n"
-                            f"• **Best Match Identity:** **{best_id}** (Score: `{best_sc_pct:.1f}%`)\n\n"
-                            f"• **Second-Best Identity:** {second_display}\n\n"
-                            f"• **Threshold Used:** `{thresh_pct:.0f}%` (`{recognition_threshold:.2f}`)\n\n"
-                            f"• **Decision / Reason:** {reason_text}\n\n"
-                            f"• **All Candidates:** {all_scores_str if all_scores_str else 'None'}"
-                        )
-                        diagnostics_info.append(diag_card)
-
-                    metric_known_count.metric(label="Recognized Faces", value=known_count)
-                    annotated = draw_recognition_results(frame, recognitions)
-                    st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption="Recognition Result", use_container_width=True)
-
-                    loaded_profiles_str = ", ".join([f"{k} ({v.get('count', 0) if isinstance(v, dict) else 'ok'} samples)" for k, v in cached_embs.items()])
-                    diag_text = (
-                        f"**Registered Profiles:** {loaded_profiles_str}\n\n"
-                        f"**Active Threshold:** `{recognition_threshold:.2f}`\n\n"
-                        + "\n\n".join(diagnostics_info)
-                    )
-                    diag_box.markdown(diag_text)
-
-                elif st.session_state["mode"] == "Registration":
-                    reg_name = st.session_state["target_name"]
-                    faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
-                    if len(faces) == 0:
-                        st.warning("⚠️ No face detected in the captured photo! Please look directly at the camera.")
-                    else:
-                        largest_face = max(faces, key=lambda box: box[2] * box[3])
-                        face_crop = crop_face(frame, largest_face, target_size=(160, 160))
-                        saved_path = save_face_sample(face_crop, reg_name, 1)
-                        try:
-                            rec_net = load_face_recognizer(SFACE_MODEL_PATH)
-                            embs = generate_dataset_embeddings(recognizer_net=rec_net)
-                            save_embeddings(embs, EMBEDDINGS_CACHE_PATH)
-                        except Exception:
-                            pass
-                        st.success(f"🎉 Successfully captured and registered face sample for **{reg_name}**!")
-                        st.image(cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB), caption=f"Sample: {reg_name}", width=160)
-            else:
-                st.info("👆 Please take a photo or upload an image to proceed.")
+            render_browser_camera_flow(
+                mode=st.session_state["mode"],
+                face_cascade=face_cascade,
+                scale_factor=scale_factor,
+                min_neighbors=min_neighbors,
+                recognition_threshold=recognition_threshold,
+                ambiguity_margin=ambiguity_margin,
+                metric_face_count=metric_face_count,
+                metric_known_count=metric_known_count,
+                diag_box=diag_box,
+                target_name=st.session_state.get("target_name"),
+                target_samples=st.session_state.get("target_samples", 20)
+            )
 
         # -------------------------------------------------------------
         # BRANCH B: LIVE OPENCV WEBCAM STREAM (Local MacBook)
         # -------------------------------------------------------------
         else:
-            # Load Haar Cascade face detector
-            try:
-                face_cascade = load_face_cascade()
-            except RuntimeError as err:
-                st.error(f"❌ {err}")
-                st.session_state["camera_active"] = False
-                st.stop()
-
             # Connect to webcam
             cap = get_camera(camera_index)
 
-            # Handle unavailable webcam
+            # Handle unavailable webcam: seamless automatic fallback to Browser Camera!
             if cap is None or not cap.isOpened():
-                st.error(
-                    f"❌ **Webcam Unavailable (Camera Index {camera_index})**\n\n"
-                    "Could not connect to a local video capture device.\n\n"
-                    "• **Running on Streamlit Cloud?** Cloud servers have no physical webcams. Switch the **Camera Input Method** in the sidebar to **\"Browser Camera / Snapshot (Cloud & Mobile)\"** to capture photos directly through your browser!\n"
-                    "• **Running locally on MacBook?** Ensure camera permissions are granted in System Settings and no other app (FaceTime/Zoom) is using the webcam."
+                st.info(
+                    "🌐 **Cloud Server Detected (No Hardware Camera on Server)**\n\n"
+                    "Since this application is running on a cloud container (Streamlit Cloud), there is no physical webcam plugged into the server.\n\n"
+                    "👉 **Switched to Browser Camera automatically below** — capture a photo or upload an image to use face detection & recognition in real time!"
                 )
-                st.session_state["camera_active"] = False
-                st.session_state["mode"] = "Error"
+                render_browser_camera_flow(
+                    mode=st.session_state["mode"],
+                    face_cascade=face_cascade,
+                    scale_factor=scale_factor,
+                    min_neighbors=min_neighbors,
+                    recognition_threshold=recognition_threshold,
+                    ambiguity_margin=ambiguity_margin,
+                    metric_face_count=metric_face_count,
+                    metric_known_count=metric_known_count,
+                    diag_box=diag_box,
+                    target_name=st.session_state.get("target_name"),
+                    target_samples=st.session_state.get("target_samples", 20)
+                )
             else:
                 # -------------------------------------------------------------
                 # MODE 1: REAL-TIME DEEP FACE RECOGNITION (Stage 4 & 5)
