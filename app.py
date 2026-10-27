@@ -454,6 +454,51 @@ with col_cam:
         )
 
 
+# -------------------------------------------------------------
+# Helper: Unpack a single recognize_face() result tuple safely.
+#
+# recognize_face() always returns a 5-tuple:
+#   (final_name: str, best_score: float, is_known: bool,
+#    candidate_scores: dict, debug_info: dict)
+#
+# This helper is called once per detected face inside every
+# "for idx, (x, y, w, h) in enumerate(faces)" loop so that
+# result unpacking is defined in one place only.  It never
+# receives the entire faces list — it receives the single
+# result returned for ONE face crop.
+# -------------------------------------------------------------
+def _unpack_recognition_result(res) -> tuple:
+    """
+    Unpack the return value of recognize_face() into
+    (name, score, is_known, debug_info).
+
+    Handles both the normal 5-tuple return and the legacy
+    dict return so the caller never needs isinstance guards.
+
+    Args:
+        res: Return value of recognize_face() — a 5-tuple
+             (name, score, is_known, candidate_scores, debug_info)
+             or, for backwards compatibility, a dict.
+
+    Returns:
+        tuple: (name: str, score: float, is_known: bool, dbg: dict)
+    """
+    if isinstance(res, (tuple, list)):
+        # Standard 5-tuple: (name, score, is_known, candidate_scores, debug_info)
+        name     = str(res[0]) if len(res) > 0 else "Unknown Person"
+        score    = float(res[1]) if len(res) > 1 else 0.0
+        is_known = bool(res[2]) if len(res) > 2 else False
+        dbg      = dict(res[4]) if len(res) > 4 else {}
+    elif isinstance(res, dict):
+        name     = str(res.get("name", "Unknown Person"))
+        score    = float(res.get("score", res.get("confidence", 0.0)))
+        is_known = bool(res.get("is_known", False))
+        dbg      = dict(res.get("debug_info", {}))
+    else:
+        name, score, is_known, dbg = "Unknown Person", 0.0, False, {}
+    return name, score, is_known, dbg
+
+
 # Helper: Render Browser Camera Flow (for Streamlit Cloud and Mobile Browsers)
 def render_browser_camera_flow(
     mode,
@@ -572,19 +617,9 @@ def render_browser_camera_flow(
                     threshold=recognition_threshold,
                     ambiguity_margin=ambiguity_margin
                 )
-                if isinstance(res, (tuple, list)):
-                    name = res[0]
-                    score = res[1]
-                    is_known = res[2] if len(res) > 2 else False
-                    dbg = res[4] if len(res) > 4 else {}
-                elif isinstance(res, dict):
-                    name = res.get("name", "Unknown Person")
-                    score = res.get("score", res.get("confidence", 0.0))
-                    is_known = res.get("is_known", False)
-                    dbg = res.get("debug_info", {})
-                else:
-                    name, score, is_known = "Unknown Person", 0.0, False
-                    dbg = {}
+                # Unpack via shared helper — covers all faces in the frame,
+                # one call per face.  No [0] indexing; no early break/return.
+                name, score, is_known, dbg = _unpack_recognition_result(res)
 
                 confidence = score * 100.0 if score <= 1.0 else score
                 if is_known and name and name != "Unknown Person":
@@ -812,20 +847,9 @@ if st.session_state["camera_active"]:
                                 threshold=recognition_threshold,
                                 ambiguity_margin=ambiguity_margin
                             )
-
-                            if isinstance(res, (tuple, list)):
-                                name = res[0]
-                                score = res[1]
-                                is_known = res[2] if len(res) > 2 else False
-                                dbg = res[4] if len(res) > 4 else {}
-                            elif isinstance(res, dict):
-                                name = res.get("name", "Unknown Person")
-                                score = res.get("score", res.get("confidence", 0.0))
-                                is_known = res.get("is_known", False)
-                                dbg = res.get("debug_info", {})
-                            else:
-                                name, score, is_known = "Unknown Person", 0.0, False
-                                dbg = {}
+                            # Unpack via shared helper — covers all faces in the frame,
+                            # one call per face.  No [0] indexing; no early break/return.
+                            name, score, is_known, dbg = _unpack_recognition_result(res)
 
                             confidence = score * 100.0 if score <= 1.0 else score
 
