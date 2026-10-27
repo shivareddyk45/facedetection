@@ -26,6 +26,7 @@ from src.face_utils import (
     draw_faces,
     crop_face,
     save_face_sample,
+    is_valid_face_sample,
     get_registered_users,
     delete_registered_user,
     sanitize_name,
@@ -714,9 +715,16 @@ def render_browser_camera_flow(
             faces = detect_faces(frame, face_cascade, scale_factor=scale_factor, min_neighbors=min_neighbors)
             if len(faces) == 0:
                 st.warning("No face detected in the photo! Please look directly at the camera.")
+            elif len(faces) > 1:
+                st.warning(f"Multiple faces ({len(faces)}) detected. Please ensure only the person being registered is in frame.")
             else:
-                largest_face = max(faces, key=lambda box: box[2] * box[3])
+                largest_face = faces[0]
                 face_crop = crop_face(frame, largest_face, target_size=(160, 160))
+                is_valid, val_reason = is_valid_face_sample(face_crop)
+                if not is_valid:
+                    st.error(f"Cannot register sample: {val_reason}. Please hold still with good lighting.")
+                    return
+
                 existing_users = get_registered_users()
                 sample_idx = existing_users.get(reg_name, 0) + 1
                 saved_path = save_face_sample(face_crop, reg_name, sample_idx)
@@ -985,25 +993,32 @@ if st.session_state["camera_active"]:
                                 2,
                                 cv2.LINE_AA
                             )
+                        elif len(faces) > 1:
+                            status_feedback.warning(f"Multiple faces ({len(faces)}) detected! Please ensure only one person is in front of the camera during registration.")
+                            annotated_frame = draw_faces(frame, faces, color=(0, 165, 255))
                         else:
-                            largest_face = max(faces, key=lambda box: box[2] * box[3])
-
+                            face_box = faces[0]
                             current_time = time.time()
-                            if current_time - last_save_time >= 0.12:
-                                face_crop = crop_face(frame, largest_face, target_size=(160, 160))
-                                save_face_sample(face_crop, reg_name, saved_count + 1)
-                                saved_count += 1
-                                last_save_time = current_time
+                            # 0.20s spacing allows natural slight head movements for multi-angle sample capture
+                            if current_time - last_save_time >= 0.20:
+                                face_crop = crop_face(frame, face_box, target_size=(160, 160))
+                                is_valid, val_reason = is_valid_face_sample(face_crop)
+                                if not is_valid:
+                                    status_feedback.warning(f"Sample skipped ({val_reason}). Please hold steady with good lighting.")
+                                else:
+                                    save_face_sample(face_crop, reg_name, saved_count + 1)
+                                    saved_count += 1
+                                    last_save_time = current_time
 
-                                if len(sample_previews) < 4:
-                                    sample_previews.append(cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB))
+                                    if len(sample_previews) < 4:
+                                        sample_previews.append(cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB))
 
-                                reg_progress.progress(saved_count / total_target)
-                                status_feedback.info(f"Capturing sample {saved_count} of {total_target} for {reg_name}...")
+                                    reg_progress.progress(saved_count / total_target)
+                                    status_feedback.info(f"Capturing sample {saved_count} of {total_target} for {reg_name} (turn head slightly for diversity)...")
 
                             annotated_frame = draw_faces(
                                 frame,
-                                [largest_face],
+                                [face_box],
                                 color=(0, 255, 0),
                                 custom_label=f"{reg_name} ({saved_count}/{total_target})"
                             )

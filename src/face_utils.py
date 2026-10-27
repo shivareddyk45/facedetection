@@ -221,6 +221,59 @@ def save_face_sample(face_crop: np.ndarray, person_name: str, sample_index: int,
     return filepath
 
 
+def is_valid_face_sample(
+    face_crop: np.ndarray,
+    min_size: int = 50,
+    min_blur_var: float = 16.0,
+    min_brightness: float = 25.0,
+    max_brightness: float = 230.0,
+    min_contrast: float = 16.0
+) -> tuple:
+    """
+    Validate that a face crop is sharp, well-exposed, and suitable for high-accuracy recognition.
+
+    Checks:
+    - Minimum spatial dimensions (avoid tiny crops).
+    - Blur detection via Laplacian variance (reject motion-blurred captures).
+    - Under-exposure check (mean pixel intensity >= min_brightness).
+    - Over-exposure / washed out check (mean pixel intensity <= max_brightness).
+    - Contrast check (standard deviation >= min_contrast).
+
+    Args:
+        face_crop (np.ndarray): Cropped BGR face image.
+        min_size (int): Minimum width and height in pixels.
+        min_blur_var (float): Minimum Laplacian variance threshold.
+        min_brightness (float): Minimum mean intensity.
+        max_brightness (float): Maximum mean intensity.
+        min_contrast (float): Minimum intensity standard deviation.
+
+    Returns:
+        tuple: (is_valid: bool, reason: str)
+    """
+    if face_crop is None or face_crop.size == 0:
+        return False, "Empty or invalid image frame"
+    h, w = face_crop.shape[:2]
+    if h < min_size or w < min_size:
+        return False, f"Face region too small ({w}x{h} < {min_size}px)"
+
+    gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY) if face_crop.ndim == 3 else face_crop
+    blur_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    if blur_var < min_blur_var:
+        return False, f"Face is blurry (sharpness={blur_var:.1f} < {min_blur_var:.1f})"
+
+    mean_val = float(gray.mean())
+    if mean_val < min_brightness:
+        return False, f"Face too dark (brightness={mean_val:.1f} < {min_brightness:.1f})"
+    if mean_val > max_brightness:
+        return False, f"Face overexposed/washed out (brightness={mean_val:.1f} > {max_brightness:.1f})"
+
+    std_val = float(gray.std())
+    if std_val < min_contrast:
+        return False, f"Low contrast face (contrast={std_val:.1f} < {min_contrast:.1f})"
+
+    return True, "Valid face sample"
+
+
 def get_registered_users(base_dir: str = "data/faces") -> dict:
     """
     Scan dataset directory and return registered people with their sample counts.
@@ -378,9 +431,12 @@ def generate_dataset_embeddings(
                 if file_entry.is_file() and os.path.splitext(file_entry.name)[1].lower() in valid_exts:
                     img = cv2.imread(file_entry.path)
                     if img is not None and img.size > 0:
-                        emb = get_face_embedding(img, recognizer_net)
-                        if emb is not None and emb.shape == (128,):
-                            raw_embeddings.append(emb)
+                        is_val, _ = is_valid_face_sample(img)
+                        # Exclude corrupted/blurry files if we have sufficient samples
+                        if is_val or len(raw_embeddings) < 2:
+                            emb = get_face_embedding(img, recognizer_net)
+                            if emb is not None and emb.shape == (128,):
+                                raw_embeddings.append(emb)
 
             if raw_embeddings:
                 raw_matrix = np.array(raw_embeddings, dtype=np.float32)
