@@ -51,7 +51,7 @@ def load_face_cascade():
     return face_cascade
 
 
-def detect_faces(frame: np.ndarray, face_cascade, scale_factor: float = 1.1, min_neighbors: int = 5):
+def detect_faces(frame: np.ndarray, face_cascade, scale_factor: float = 1.05, min_neighbors: int = 4):
     """
     Detect faces in a single video frame.
 

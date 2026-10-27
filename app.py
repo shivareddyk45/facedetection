@@ -241,8 +241,9 @@ st.sidebar.markdown("---")
 # Section 2: Model Settings
 st.sidebar.markdown("### Model Settings")
 with st.sidebar.expander("Model Tuning & Thresholds", expanded=False):
-    scale_factor = st.slider("Detection Scale Factor", min_value=1.05, max_value=1.5, value=1.1, step=0.05)
-    min_neighbors = st.slider("Min Neighbors", min_value=3, max_value=10, value=5, step=1)
+    scale_factor = st.slider("Detection Scale Factor", min_value=1.05, max_value=1.5, value=1.05, step=0.05)
+    min_neighbors = st.slider("Min Neighbors", min_value=2, max_value=10, value=4, step=1)
+    st.caption("💡 For multiple faces: Scale Factor = 1.05, Min Neighbors = 3–4")
     recognition_threshold = st.slider(
         "Recognition Confidence Threshold",
         min_value=0.30,
