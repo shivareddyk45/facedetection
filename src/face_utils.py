@@ -192,17 +192,27 @@ def sanitize_name(name: str) -> str:
 
 def crop_face(frame: np.ndarray, face_box: tuple, target_size: tuple = (112, 112)) -> np.ndarray:
     """
-    Crop face region of interest (ROI) from frame and resize it.
+    Safely crop face region of interest (ROI) from frame and resize it.
+    Guarantees valid output dimensions and prevents OpenCV resize crashes.
     """
+    if frame is None or frame.size == 0 or face_box is None:
+        return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
+
     x, y, w, h = face_box
     h_frame, w_frame = frame.shape[:2]
 
-    x1 = max(0, x)
-    y1 = max(0, y)
-    x2 = min(w_frame, x + w)
-    y2 = min(h_frame, y + h)
+    x1 = max(0, int(round(x)))
+    y1 = max(0, int(round(y)))
+    x2 = min(w_frame, int(round(x + w)))
+    y2 = min(h_frame, int(round(y + h)))
+
+    if x2 <= x1 or y2 <= y1:
+        return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
 
     face_roi = frame[y1:y2, x1:x2]
+    if face_roi.size == 0 or face_roi.shape[0] == 0 or face_roi.shape[1] == 0:
+        return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
+
     resized_face = cv2.resize(face_roi, target_size, interpolation=cv2.INTER_AREA)
     return resized_face
 

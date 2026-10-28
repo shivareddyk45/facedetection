@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import cv2
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Automatically detect if running inside a headless cloud container (Streamlit Community Cloud)
 IS_CLOUD_ENV = (
@@ -514,7 +514,8 @@ def render_browser_camera_flow(
     status_card_placeholder,
     debug_card_placeholder=None,
     target_name=None,
-    target_samples=20
+    target_samples=20,
+    video_placeholder=None
 ):
     st.markdown(f"#### {mode} (Browser Camera Mode)")
     st.caption("Capture a photo using your device camera or upload an image file:")
@@ -530,6 +531,7 @@ def render_browser_camera_flow(
     if active_shot is not None:
         try:
             pil_shot = Image.open(active_shot)
+            pil_shot = ImageOps.exif_transpose(pil_shot)
             frame_rgb = np.array(pil_shot.convert("RGB"))
             frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
         except Exception as e:
@@ -543,7 +545,11 @@ def render_browser_camera_flow(
             metric_face_count.metric(label="Faces detected", value=len(faces))
             metric_known_count.metric(label="Recognized faces", value=0)
             annotated = draw_faces(frame, faces, color=(0, 255, 0), thickness=2)
-            st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
+            frame_rgb_disp = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+            if video_placeholder is not None:
+                video_placeholder.image(frame_rgb_disp, caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
+            else:
+                st.image(frame_rgb_disp, caption=f"Detection: {len(faces)} face(s) found", use_container_width=True)
 
             if len(faces) == 0:
                 result_card_placeholder.markdown(
@@ -647,7 +653,11 @@ def render_browser_camera_flow(
 
             metric_known_count.metric(label="Recognized faces", value=known_count)
             annotated = draw_recognition_results(frame, recognitions)
-            st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), caption="Recognition Result", use_container_width=True)
+            frame_rgb_disp = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+            if video_placeholder is not None:
+                video_placeholder.image(frame_rgb_disp, caption="Recognition Result", use_container_width=True)
+            else:
+                st.image(frame_rgb_disp, caption="Recognition Result", use_container_width=True)
 
             # Update Recognition Result Card beside camera
             if len(faces) == 0:
@@ -742,6 +752,16 @@ def render_browser_camera_flow(
                 st.info("Capture more photos from different angles or click 'Start Recognition' to test.")
     else:
         st.info("Look at your camera and click 'Take photo' above (or upload an image).")
+        if video_placeholder is not None:
+            video_placeholder.markdown(
+                """
+                <div class="clean-card" style="text-align: center; padding: 28px 16px;">
+                    <p style="font-size: 1rem; color: #0d6efd; margin: 0; font-weight: 500;">Browser camera active</p>
+                    <p style="font-size: 0.85rem; color: #6c757d; margin-top: 4px;">Click <b>Take photo</b> below to capture and analyze all faces in view.</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 
 # -------------------------------------------------------------
@@ -770,7 +790,8 @@ if st.session_state["camera_active"]:
             status_card_placeholder=status_card_placeholder,
             debug_card_placeholder=debug_card_placeholder,
             target_name=st.session_state.get("target_name"),
-            target_samples=st.session_state.get("target_samples", 20)
+            target_samples=st.session_state.get("target_samples", 20),
+            video_placeholder=video_placeholder
         )
 
     # Live OpenCV Webcam Stream
@@ -796,7 +817,8 @@ if st.session_state["camera_active"]:
                 status_card_placeholder=status_card_placeholder,
                 debug_card_placeholder=debug_card_placeholder,
                 target_name=st.session_state.get("target_name"),
-                target_samples=st.session_state.get("target_samples", 20)
+                target_samples=st.session_state.get("target_samples", 20),
+                video_placeholder=video_placeholder
             )
         else:
             # -------------------------------------------------------------

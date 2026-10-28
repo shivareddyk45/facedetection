@@ -61,11 +61,12 @@ Desktop.ini
 
 # 6. Face Datasets & Personal Face Images
 # Keeps the folder structure in Git via .gitkeep, but ignores all personal face photos
-data/faces/*
 !data/faces/.gitkeep
 data/face_*.jpg
 
 # 7. Model Cache & Generated Embeddings
 # Embeddings pickle contains private user face prototypes
-models/embeddings.pkl
 !models/.gitkeep
+
+backups/
+image-classification/
